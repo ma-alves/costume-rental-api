@@ -79,8 +79,10 @@ def create_rental(
 	)
 	if not db_costume:
 		raise HTTPException(400, detail='Costume not registered.')
+	
 	if db_costume.availability == CostumeAvailability.UNAVAILABLE:
 		raise HTTPException(400, detail='Costume unavailable.')
+	
 	db_costume.availability = CostumeAvailability.UNAVAILABLE
 
 	# Customer code
@@ -114,6 +116,7 @@ def patch_rental(
 	rental: RentalPatch,
 ):
 	db_rental = session.scalar(select(Rental).where(Rental.id == rental_id))
+	
 	if not db_rental:
 		raise HTTPException(404, detail='Rental not registered.')
 
