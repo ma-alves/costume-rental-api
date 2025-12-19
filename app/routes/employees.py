@@ -4,15 +4,15 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from fantasie.database import get_session
-from fantasie.models import Employee
-from fantasie.schemas import (
+from app.database import get_session
+from app.models import Employee
+from app.schemas import (
 	EmployeeInput,
 	EmployeeList,
 	EmployeeOutput,
 	Message,
 )
-from fantasie.security import get_password_hash, get_current_employee
+from app.security import get_password_hash, get_current_employee
 
 
 router = APIRouter(prefix='/employees', tags=['employees'])

@@ -4,7 +4,7 @@ from random import randint
 import factory
 import factory.fuzzy
 
-from fantasie.models import (
+from app.models import (
 	Costume,
 	CostumeAvailability,
 	Customer,

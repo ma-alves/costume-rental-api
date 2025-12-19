@@ -1,14 +1,16 @@
 import pytest
+import pytest_asyncio
 
 from fastapi.testclient import TestClient
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from fantasie.database import get_session
-from fantasie.main import app
-from fantasie.models import Base, CostumeAvailability
-from fantasie.security import get_password_hash
+from app.database import get_session
+from app.main import app
+from app.models import CostumeAvailability, table_registry
+from app.security import get_password_hash
 
 from factories import (
 	CostumeFactory,
@@ -18,17 +20,23 @@ from factories import (
 )
 
 
-@pytest.fixture
-def test_session():
-	engine = create_engine(
-		'sqlite:///:memory:',
+@pytest_asyncio.fixture
+async def test_session():
+	engine = create_async_engine(
+		'sqlite+aiosqlite:///:memory:',
 		connect_args={'check_same_thread': False},
 		poolclass=StaticPool,
 	)
-	TestSession = sessionmaker(bind=engine)
-	Base.metadata.create_all(engine)
-	yield TestSession()
-	Base.metadata.drop_all(engine)
+	# TestSession = sessionmaker(bind=engine)
+	# Base.metadata.create_all(engine)
+	# yield TestSession()
+	# Base.metadata.drop_all(engine)
+	async with engine.begin() as conn: 
+		await conn.run_sync(table_registry.metadata.create_all) 
+	async with AsyncSession(engine, expire_on_commit=False) as session:
+		yield session
+	async with engine.begin() as conn:
+		await conn.run_sync(table_registry.metadata.drop_all)
 
 
 @pytest.fixture

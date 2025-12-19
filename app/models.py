@@ -1,21 +1,20 @@
-from datetime import datetime, timedelta, date
+from datetime import datetime, timedelta
 from enum import Enum
 from typing import List, Optional
 
 from sqlalchemy import String, ForeignKey
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship, mapped_as_dataclass, registry
 
 
-class Base(DeclarativeBase):
-	pass
-
+table_registry = registry()
 
 class CostumeAvailability(str, Enum):
 	AVAILABLE = 'available'
 	UNAVAILABLE = 'unavailable'
 
 
-class Costume(Base):
+@mapped_as_dataclass(table_registry)
+class Costume:
 	__tablename__ = 'costumes'
 
 	id: Mapped[int] = mapped_column(primary_key=True)
@@ -27,7 +26,8 @@ class Costume(Base):
 	rental: Mapped[List['Rental']] = relationship(back_populates='costumes')
 
 
-class Customer(Base):
+@mapped_as_dataclass(table_registry)
+class Customer:
 	__tablename__ = 'customers'
 
 	id: Mapped[int] = mapped_column(primary_key=True)
@@ -40,7 +40,8 @@ class Customer(Base):
 	rental: Mapped[List['Rental']] = relationship(back_populates='customers')
 
 
-class Employee(Base):
+@mapped_as_dataclass(table_registry)
+class Employee:
 	__tablename__ = 'employees'
 
 	id: Mapped[int] = mapped_column(primary_key=True)
@@ -53,8 +54,10 @@ class Employee(Base):
 	rental: Mapped[List['Rental']] = relationship(back_populates='employees')
 
 
-class Rental(Base):
-	"""Neste formato o cliente não tem relação direta com o funcionário,
+@mapped_as_dataclass(table_registry)
+class Rental:
+	"""
+	Neste formato o cliente não tem relação direta com o funcionário,
 	apenas com o aluguel, que pelo seu registro liga o cliente ao
 	funcionário indiretamente. Essa relação também ocorre da mesma
 	forma com a fantasia, tendo a tabela 'Rental' como centro.
@@ -66,11 +69,12 @@ class Rental(Base):
 	employee_id: Mapped[int] = mapped_column(ForeignKey('employees.id'))
 	customer_id: Mapped[int] = mapped_column(ForeignKey('customers.id'))
 	costume_id: Mapped[int] = mapped_column(ForeignKey('costumes.id'))
-	rental_date: Mapped[datetime] = mapped_column(default=datetime.now())
-	return_date: Mapped[datetime] = mapped_column(
-		default=datetime.now() + timedelta(days=7)
-	)
 
 	employees: Mapped['Employee'] = relationship(back_populates='rental')
 	customers: Mapped['Customer'] = relationship(back_populates='rental')
 	costumes: Mapped['Costume'] = relationship(back_populates='rental')
+
+	rental_date: Mapped[datetime] = mapped_column(default=datetime.now())
+	return_date: Mapped[datetime] = mapped_column(
+		default=datetime.now() + timedelta(days=7)
+	)

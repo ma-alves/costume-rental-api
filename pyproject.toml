@@ -1,10 +1,11 @@
 [project]
-name = "fantasie"
+name = "costume-rental-api"
 version = "0.1.0"
-description = "Add your description here"
+description = "Costume Rental API by ma-alves"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "aiosqlite>=0.22.0",
     "alembic>=1.16.2",
     "annotated-types>=0.7.0",
     "anyio>=4.9.0",
@@ -32,11 +33,13 @@ dependencies = [
     "passlib>=1.7.4",
     "pluggy>=1.6.0",
     "psutil>=6.1.1",
+    "psycopg[binary]>=3.3.2",
     "pydantic>=2.11.7",
     "pydantic-core>=2.33.2",
     "pydantic-settings>=2.10.1",
     "pyjwt>=2.10.1",
     "pytest>=8.4.1",
+    "pytest-asyncio>=1.3.0",
     "pytest-cov>=6.2.1",
     "python-dateutil>=2.9.0.post0",
     "python-dotenv>=1.1.1",
@@ -44,7 +47,7 @@ dependencies = [
     "ruff>=0.12.2",
     "six>=1.17.0",
     "sniffio>=1.3.1",
-    "sqlalchemy>=2.0.41",
+    "sqlalchemy[asyncio]>=2.0.41",
     "starlette>=0.46.2",
     "tomli>=2.2.1",
     "typing-extensions>=4.14.1",
@@ -64,3 +67,4 @@ indent-style = 'tab'
 [tool.pytest.ini_options]
 pythonpath = "."
 addopts = '-p no:warnings'
+asyncio_default_fixture_loop_scope = 'function'

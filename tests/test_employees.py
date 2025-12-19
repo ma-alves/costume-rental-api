@@ -1,7 +1,7 @@
 from http import HTTPStatus
 
 from fastapi.testclient import TestClient
-from fantasie.models import Employee
+from app.models import Employee
 
 
 def test_read_employees(client: TestClient):

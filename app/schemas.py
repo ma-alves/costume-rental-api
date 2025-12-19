@@ -3,7 +3,7 @@ from typing import List
 
 from pydantic import BaseModel, EmailStr
 
-from fantasie.models import CostumeAvailability
+from .models import CostumeAvailability
 
 
 class Message(BaseModel):

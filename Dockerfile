@@ -1,10 +1,14 @@
-FROM python:3.11-slim
+FROM python:3.12-slim
 
-WORKDIR app/
-COPY . .
+# Install uv.
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
-RUN pip install --no-cache-dir --upgrade -r requirements.txt
+# Copy the application into the container.
+COPY . /app
 
-EXPOSE 8000
+# Install the application dependencies.
+WORKDIR /app
+RUN uv sync --frozen --no-cache
 
-CMD [ "uvicorn", "fantasie.main:app", "--host", "0.0.0.0", "--port", "8000" ]
+# Run the application.
+CMD ["uv", "run", "uvicorn", "--port", "8000", "--host", "0.0.0.0", "app.main:app"]

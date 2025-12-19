@@ -4,22 +4,22 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from fantasie.database import get_session
-from fantasie.models import (
+from app.database import get_session
+from app.models import (
 	Costume,
 	CostumeAvailability,
 	Customer,
 	Employee,
 	Rental,
 )
-from fantasie.schemas import (
+from app.schemas import (
 	Message,
 	RentalInput,
 	RentalList,
 	RentalSchema,
 	RentalPatch,
 )
-from fantasie.security import get_current_employee
+from app.security import get_current_employee
 
 
 router = APIRouter(prefix='/rental', tags=['rental'])

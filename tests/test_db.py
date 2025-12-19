@@ -1,7 +1,7 @@
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from fantasie.models import (
+from app.models import (
 	Costume,
 	CostumeAvailability,
 	Customer,

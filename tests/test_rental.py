@@ -1,6 +1,6 @@
 from fastapi.testclient import TestClient
 
-from fantasie.routes.rental import set_rental_attr
+from app.routes.rental import set_rental_attr
 
 
 def test_read_rental(client: TestClient, employee, token, rental):

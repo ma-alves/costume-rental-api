@@ -5,10 +5,10 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from fantasie.database import get_session
-from fantasie.models import Employee
-from fantasie.schemas import Token
-from fantasie.security import (
+from app.database import get_session
+from app.models import Employee
+from app.schemas import Token
+from app.security import (
 	create_access_token,
 	get_current_employee,
 	verify_password_hash,

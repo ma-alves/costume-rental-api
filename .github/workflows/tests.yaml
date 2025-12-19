@@ -1,0 +1,54 @@
+name: tests
+on:
+  push:
+    branches:
+      - dev
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      SECRET_KEY: ${{ secrets.SECRET_KEY }}
+      ALGORITHM: ${{ secrets.ALGORITHM }}
+      ACCESS_TOKEN_EXPIRE_DAYS: ${{ secrets.ACCESS_TOKEN_EXPIRE_DAYS }}
+
+    services:
+      db:
+        image: postgres:17
+        env:
+          POSTGRES_DB: database
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Copia os arquivos do repositório
+        uses: actions/checkout@v5
+
+      - name: Instalar Python
+        uses: actions/setup-python@v6
+        with:
+          python-version-file: ".python-version"
+
+      - name: Instalar uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Instalar dependências e projeto
+        run: uv sync --locked --all-extras --dev
+
+      - name: Executar migrações
+        run: uv run alembic upgrade head
+
+      - name: Executar testes
+        run: uv run pytest -s -x --cov=app -vv

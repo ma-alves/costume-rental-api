@@ -8,10 +8,10 @@ from passlib.context import CryptContext
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from fantasie.database import get_session
-from fantasie.models import Employee
-from fantasie.schemas import TokenData
-from fantasie.settings import Settings
+from .database import get_session
+from .models import Employee
+from .schemas import TokenData
+from .settings import Settings
 
 settings = Settings()
 pwd_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
