@@ -17,41 +17,41 @@ class CostumeAvailability(str, Enum):
 class Costume:
 	__tablename__ = 'costumes'
 
-	id: Mapped[int] = mapped_column(primary_key=True)
+	id: Mapped[int] = mapped_column(primary_key=True, init=False)
 	name: Mapped[str]
 	description: Mapped[str]
 	fee: Mapped[float]
 	availability: Mapped[CostumeAvailability]
 
-	rental: Mapped[List['Rental']] = relationship(back_populates='costumes')
+	rental: Mapped[List['Rental']] = relationship(back_populates='costumes', init=False)
 
 
 @mapped_as_dataclass(table_registry)
 class Customer:
 	__tablename__ = 'customers'
 
-	id: Mapped[int] = mapped_column(primary_key=True)
+	id: Mapped[int] = mapped_column(primary_key=True, init=False)
 	cpf: Mapped[str] = mapped_column(String(11))
 	name: Mapped[str]
 	email: Mapped[str]
 	phone_number: Mapped[str] = mapped_column(String(11))
 	address: Mapped[str]
 
-	rental: Mapped[List['Rental']] = relationship(back_populates='customers')
+	rental: Mapped[List['Rental']] = relationship(back_populates='customers', init=False)
 
 
 @mapped_as_dataclass(table_registry)
 class Employee:
 	__tablename__ = 'employees'
 
-	id: Mapped[int] = mapped_column(primary_key=True)
+	id: Mapped[int] = mapped_column(primary_key=True, init=False)
 	name: Mapped[str]
 	email: Mapped[str]
 	password: Mapped[str]
 	phone_number: Mapped[Optional[str]] = mapped_column(String(11))
 	is_admin: Mapped[bool]
 
-	rental: Mapped[List['Rental']] = relationship(back_populates='employees')
+	rental: Mapped[List['Rental']] = relationship(back_populates='employees', init=False)
 
 
 @mapped_as_dataclass(table_registry)
@@ -65,14 +65,14 @@ class Rental:
 
 	__tablename__ = 'rental'
 
-	id: Mapped[int] = mapped_column(primary_key=True)
+	id: Mapped[int] = mapped_column(primary_key=True, init=False)
 	employee_id: Mapped[int] = mapped_column(ForeignKey('employees.id'))
 	customer_id: Mapped[int] = mapped_column(ForeignKey('customers.id'))
 	costume_id: Mapped[int] = mapped_column(ForeignKey('costumes.id'))
 
-	employees: Mapped['Employee'] = relationship(back_populates='rental')
-	customers: Mapped['Customer'] = relationship(back_populates='rental')
-	costumes: Mapped['Costume'] = relationship(back_populates='rental')
+	employees: Mapped['Employee'] = relationship(back_populates='rental', init=False)
+	customers: Mapped['Customer'] = relationship(back_populates='rental', init=False)
+	costumes: Mapped['Costume'] = relationship(back_populates='rental', init=False)
 
 	rental_date: Mapped[datetime] = mapped_column(default=datetime.now())
 	return_date: Mapped[datetime] = mapped_column(

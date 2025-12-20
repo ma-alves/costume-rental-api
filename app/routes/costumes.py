@@ -3,7 +3,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_session
 from app.models import CostumeAvailability, Costume, Employee
@@ -14,11 +14,11 @@ from app.security import get_current_employee
 router = APIRouter(prefix='/costumes', tags=['costumes'])
 
 CurrentEmployee = Annotated[Employee, Depends(get_current_employee)]
-SessionDep = Annotated[Session, Depends(get_session)]
+Session = Annotated[AsyncSession, Depends(get_session)]
 
 
-def query_costume_by_id(session: SessionDep, costume_id):
-	query_db_costume = session.scalar(
+async def query_costume_by_id(session: Session, costume_id):
+	query_db_costume = await session.scalar(
 		select(Costume).where(Costume.id == costume_id)
 	)
 
@@ -31,8 +31,8 @@ def query_costume_by_id(session: SessionDep, costume_id):
 
 
 @router.get('/', response_model=CostumeList)
-def get_costumes(
-	session: SessionDep,
+async def get_costumes(
+	session: Session,
 	availability: CostumeAvailability = Query(None),
 	skip: int = Query(None),
 	limit: int = Query(None),
@@ -40,25 +40,27 @@ def get_costumes(
 	query = select(Costume)
 
 	if availability:
-		query = query.filter(Costume.availability == availability)
+		query = await query.filter(Costume.availability == availability)
 
-	costumes = session.scalars(query.offset(skip).limit(limit)).all()
+	costumes_scalar = await session.scalars(query.offset(skip).limit(limit))
+	costumes = costumes_scalar.all()
 
 	return {'costumes': costumes}
 
 
 @router.get('/{costume_id}', response_model=CostumeOutput)
-def get_costume(session: SessionDep, costume_id: int):
-	return query_costume_by_id(session, costume_id)
+async def get_costume(session: Session, costume_id: int):
+	db_costume = await query_costume_by_id(session, costume_id)
+	return db_costume
 
 
 @router.post('/', response_model=CostumeOutput, status_code=HTTPStatus.CREATED)
-def create_costume(
-	session: SessionDep,
+async def create_costume(
+	session: Session,
 	current_employee: CurrentEmployee,
 	costume: CostumeInput,
 ):
-	db_costume = session.scalar(
+	db_costume = await session.scalar(
 		select(Costume).where(Costume.name == costume.name)
 	)
 
@@ -75,40 +77,41 @@ def create_costume(
 	)
 
 	session.add(db_costume)
-	session.commit()
-	session.refresh(db_costume)
+	await session.commit()
+	await session.refresh(db_costume)
 
 	return db_costume
 
 
 @router.put('/{costume_id}', response_model=CostumeOutput)
-def update_costume(
-	session: SessionDep,
+async def update_costume(
+	session: Session,
 	current_employee: CurrentEmployee,
 	costume: CostumeInput,
 	costume_id: int,
 ):
-	db_costume = query_costume_by_id(session, costume_id)
+	db_costume = await query_costume_by_id(session, costume_id)
 
 	db_costume.name = costume.name
 	db_costume.description = costume.description
 	db_costume.fee = costume.fee
 	db_costume.availability = costume.availability
-	session.commit()
-	session.refresh(db_costume)
+
+	await session.commit()
+	await session.refresh(db_costume)
 
 	return db_costume
 
 
 @router.delete('/{costume_id}', response_model=Message)
-def delete_costume(
+async def delete_costume(
 	current_employee: CurrentEmployee,
-	session: SessionDep,
+	session: Session,
 	costume_id: int,
 ):
-	db_costume = query_costume_by_id(session, costume_id)
+	db_costume = await query_costume_by_id(session, costume_id)
 
-	session.delete(db_costume)
-	session.commit()
+	await session.delete(db_costume)
+	await session.commit()
 
 	return {'message': 'Costume deleted.'}

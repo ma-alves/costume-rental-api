@@ -2,7 +2,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_session
 from app.models import (
@@ -25,11 +25,11 @@ from app.security import get_current_employee
 router = APIRouter(prefix='/rental', tags=['rental'])
 
 CurrentEmployee = Annotated[Employee, Depends(get_current_employee)]
-SessionDep = Annotated[Session, Depends(get_session)]
+Session = Annotated[AsyncSession, Depends(get_session)]
 
 
 def set_rental_attr(rental):
-	"""Sets the models' dictionaries to the json response."""
+	"""Set the models dictionaries in the json response."""
 	setattr(rental, 'costume', rental.costumes.__dict__)
 	setattr(rental, 'customer', rental.customers.__dict__)
 	setattr(rental, 'employee', rental.employees.__dict__)
@@ -38,15 +38,16 @@ def set_rental_attr(rental):
 
 
 @router.get('/', response_model=RentalList)
-def read_rental_list(
-	session: SessionDep,
+async def read_rental_list(
+	session: Session,
 	current_employee: CurrentEmployee,
 	skip: int = 0,
 	limit: int = 100,
 ):
-	db_rental_list = session.scalars(
+	db_rental_list_scalar = await session.scalars(
 		select(Rental).offset(skip).limit(limit)
-	).all()
+	)
+	db_rental_list = db_rental_list_scalar.all()
 
 	rental_list = [
 		set_rental_attr(rental_obj) for rental_obj in db_rental_list
@@ -56,10 +57,10 @@ def read_rental_list(
 
 
 @router.get('/{rental_id}', response_model=RentalSchema)
-def read_rental(
-	session: SessionDep, current_employee: CurrentEmployee, rental_id: int
+async def read_rental(
+	session: Session, current_employee: CurrentEmployee, rental_id: int
 ):
-	db_rental = session.scalar(select(Rental).where(Rental.id == rental_id))
+	db_rental = await session.scalar(select(Rental).where(Rental.id == rental_id))
 
 	if not db_rental:
 		raise HTTPException(404, detail='Rental not registered.')
@@ -70,11 +71,11 @@ def read_rental(
 
 
 @router.post('/', response_model=RentalSchema, status_code=201)
-def create_rental(
-	session: SessionDep, current_employee: CurrentEmployee, rental: RentalInput
+async def create_rental(
+	session: Session, current_employee: CurrentEmployee, rental: RentalInput
 ):
 	# Costume code
-	db_costume = session.scalar(
+	db_costume = await session.scalar(
 		select(Costume).where(Costume.id == rental.costume_id)
 	)
 	if not db_costume:
@@ -86,7 +87,7 @@ def create_rental(
 	db_costume.availability = CostumeAvailability.UNAVAILABLE
 
 	# Customer code
-	db_customer = session.scalar(
+	db_customer = await session.scalar(
 		select(Customer).where(Customer.cpf == rental.customer_cpf)
 	)
 	if not db_customer:
@@ -100,8 +101,8 @@ def create_rental(
 	)
 
 	session.add(db_rental)
-	session.commit()
-	session.refresh(db_rental)
+	await session.commit()
+	await session.refresh(db_rental)
 
 	set_rental_attr(db_rental)
 
@@ -109,13 +110,13 @@ def create_rental(
 
 
 @router.patch('/{rental_id}', response_model=RentalSchema)
-def patch_rental(
-	session: SessionDep,
+async def patch_rental(
+	session: Session,
 	current_employee: CurrentEmployee,
 	rental_id: int,
 	rental: RentalPatch,
 ):
-	db_rental = session.scalar(select(Rental).where(Rental.id == rental_id))
+	db_rental = await session.scalar(select(Rental).where(Rental.id == rental_id))
 	
 	if not db_rental:
 		raise HTTPException(404, detail='Rental not registered.')
@@ -129,8 +130,8 @@ def patch_rental(
 		)
 
 	session.add(db_rental)
-	session.commit()
-	session.refresh(db_rental)
+	await session.commit()
+	await session.refresh(db_rental)
 
 	set_rental_attr(db_rental)
 
@@ -138,10 +139,10 @@ def patch_rental(
 
 
 @router.delete('/{rental_id}', response_model=Message)
-def delete_rental(
-	session: SessionDep, current_employee: CurrentEmployee, rental_id: int
+async def delete_rental(
+	session: Session, current_employee: CurrentEmployee, rental_id: int
 ):
-	db_rental = session.scalar(select(Rental).where(Rental.id == rental_id))
+	db_rental = await session.scalar(select(Rental).where(Rental.id == rental_id))
 
 	if not db_rental:
 		raise HTTPException(404, detail='Rental not registered.')
@@ -152,7 +153,7 @@ def delete_rental(
 	)
 	db_costume.availability = CostumeAvailability.AVAILABLE
 
-	session.delete(db_rental)
-	session.commit()
+	await session.delete(db_rental)
+	await session.commit()
 
 	return {'message': 'Rental register has been deleted successfully.'}
