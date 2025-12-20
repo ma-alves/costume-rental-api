@@ -1,5 +1,5 @@
-from fantasie.schemas import Message
-from fantasie.routes import employees, auth, costumes, customers, rental
+from .schemas import Message
+from .routes import employees, auth, costumes, customers, rental
 
 from fastapi import FastAPI
 

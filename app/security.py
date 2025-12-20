@@ -6,12 +6,12 @@ from jwt import decode, encode
 from jwt.exceptions import DecodeError, ExpiredSignatureError
 from passlib.context import CryptContext
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from fantasie.database import get_session
-from fantasie.models import Employee
-from fantasie.schemas import TokenData
-from fantasie.settings import Settings
+from .database import get_session
+from .models import Employee
+from .schemas import TokenData
+from .settings import Settings
 
 settings = Settings()
 pwd_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
@@ -42,7 +42,7 @@ def create_access_token(data: dict):
 
 
 async def get_current_employee(
-	session: Session = Depends(get_session),
+	session: AsyncSession = Depends(get_session),
 	token: str = Depends(oauth2_scheme),
 ):
 	credentials_exception = HTTPException(
@@ -64,7 +64,7 @@ async def get_current_employee(
 	except ExpiredSignatureError:
 		raise credentials_exception
 
-	employee = session.scalar(
+	employee = await session.scalar(
 		select(Employee).where(Employee.email == token_data.email)
 	)
 

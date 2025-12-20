@@ -1,38 +1,45 @@
+from http import HTTPStatus
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
+from psycopg import IntegrityError
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from fantasie.database import get_session
-from fantasie.models import Employee
-from fantasie.schemas import (
+from app.database import get_session
+from app.models import Employee
+from app.schemas import (
 	EmployeeInput,
 	EmployeeList,
 	EmployeeOutput,
 	Message,
 )
-from fantasie.security import get_password_hash, get_current_employee
+from app.security import get_password_hash, get_current_employee
 
 
 router = APIRouter(prefix='/employees', tags=['employees'])
 
 CurrentEmployee = Annotated[Employee, Depends(get_current_employee)]
-SessionDep = Annotated[Session, Depends(get_session)]
+Session = Annotated[AsyncSession, Depends(get_session)]
 
 
 @router.get('/', response_model=EmployeeList)
-def read_employees(session: SessionDep, skip: int = 0, limit: int = 100):
-	employees = session.scalars(
+async def read_employees(session: Session, skip: int = 0, limit: int = 100):
+	employees_scalar = await session.scalars(
 		select(Employee).offset(skip).limit(limit)
-	).all()
+	)
+
+	employees = employees_scalar.all()
+
+	if not employees:
+		raise HTTPException(404, detail='No employees registered.')
 
 	return {'employees': employees}
 
 
 @router.get('/{employee_id}', response_model=EmployeeOutput, status_code=200)
-def read_employee(session: SessionDep, employee_id: int):
-	employee = session.scalar(
+async def read_employee(session: Session, employee_id: int):
+	employee = await session.scalar(
 		select(Employee).where(Employee.id == employee_id)
 	)
 
@@ -42,13 +49,12 @@ def read_employee(session: SessionDep, employee_id: int):
 	return employee
 
 
-# adicionar 'is_admin' em current_employee
 @router.post('/', response_model=EmployeeOutput, status_code=201)
-def create_employee(employee: EmployeeInput, session: SessionDep):
+async def create_employee(employee: EmployeeInput, session: Session):
 	"""
 	Open endpoint so anyone can test the API's permissions.
 	"""
-	db_employee = session.scalar(
+	db_employee = await session.scalar(
 		select(Employee).where(Employee.email == employee.email)
 	)
 	if db_employee:
@@ -65,16 +71,16 @@ def create_employee(employee: EmployeeInput, session: SessionDep):
 	)
 
 	session.add(db_employee)
-	session.commit()
-	session.refresh(db_employee)
+	await session.commit()
+	await session.refresh(db_employee)
 
 	return db_employee
 
 
 @router.put('/{employee_id}', response_model=EmployeeOutput)
-def update_employee(
+async def update_employee(
 	current_employee: CurrentEmployee,
-	session: SessionDep,
+	session: Session,
 	employee: EmployeeInput,
 	employee_id: int,
 ):
@@ -83,29 +89,37 @@ def update_employee(
 		and current_employee.is_admin is False
 	):
 		raise HTTPException(status_code=400, detail='Not enough permissions')
-
-	db_employee = session.scalar(
+	
+	db_employee = await session.scalar(
 		select(Employee).where(Employee.id == employee_id)
 	)
 
 	if not db_employee:
 		raise HTTPException(404, detail='Employee not registered.')
 
-	db_employee.name = employee.name
-	db_employee.password = get_password_hash(employee.password)
-	db_employee.email = employee.email
-	db_employee.phone_number = employee.phone_number
-	db_employee.is_admin = employee.is_admin
-	session.commit()
-	session.refresh(db_employee)
+	try:
+		db_employee.name = employee.name
+		db_employee.password = get_password_hash(employee.password)
+		db_employee.email = employee.email
+		db_employee.phone_number = employee.phone_number
+		db_employee.is_admin = employee.is_admin
 
-	return db_employee
+		await session.commit()
+		await session.refresh(db_employee)
+
+		return db_employee
+	
+	except IntegrityError:
+		raise HTTPException(
+            status_code=HTTPStatus.CONFLICT,
+            detail='Username or Email already exists.',
+        )
 
 
 @router.delete('/{employee_id}', response_model=Message)
-def delete_employee(
+async def delete_employee(
 	current_employee: CurrentEmployee,
-	session: SessionDep,
+	session: Session,
 	employee_id: int,
 ):
 	if (
@@ -114,14 +128,14 @@ def delete_employee(
 	):
 		raise HTTPException(status_code=400, detail='Not enough permissions')
 
-	db_employee = session.scalar(
+	db_employee = await session.scalar(
 		select(Employee).where(Employee.id == employee_id)
 	)
 
 	if not db_employee:
 		raise HTTPException(404, detail='Employee not registered.')
 
-	session.delete(db_employee)
-	session.commit()
+	await session.delete(db_employee)
+	await session.commit()
 
 	return {'message': 'Employee deleted.'}
