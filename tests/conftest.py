@@ -2,21 +2,21 @@ import pytest
 import pytest_asyncio
 
 from fastapi.testclient import TestClient
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 # from sqlalchemy import create_engine
-from sqlalchemy.orm import Session #, sessionmaker
+from sqlalchemy.orm import Session, joinedload #, sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.database import get_session
 from app.main import app
-from app.models import CostumeAvailability, table_registry
+from app.models import Costume, Employee, Customer, CostumeAvailability, Rental, table_registry
 from app.security import get_password_hash
 
 from factories import (
 	CostumeFactory,
 	CustomerFactory,
 	EmployeeFactory,
-	RentalFactory,
 )
 
 
@@ -148,10 +148,55 @@ async def customer(test_session: Session):
 
 @pytest_asyncio.fixture
 async def rental(test_session: Session):
-	test_rental = RentalFactory()
+	costume = Costume(
+		name='Test Costume',
+		description='A costume for testing',
+		fee=100.0,
+		availability=CostumeAvailability.AVAILABLE,
+	)
+	test_session.add(costume)
+	await test_session.commit()
+	await test_session.refresh(costume)
+
+	customer = Customer(
+		cpf='12345678901',
+		name='Test Customer',
+		email='test@example.com',
+		phone_number='12345678901',
+		address='123 Test St',
+	)
+	test_session.add(customer)
+	await test_session.commit()
+	await test_session.refresh(customer)
+
+	employee = Employee(
+		email='test@example.com',
+		password=get_password_hash('test1234'),
+		name='Test Employee',
+		phone_number='12345678901',
+		is_admin=True,
+	)
+	test_session.add(employee)
+	await test_session.commit()
+	await test_session.refresh(employee)
+
+	test_rental = Rental(
+		employee_id=employee.id,
+		customer_id=customer.id,
+		costume_id=costume.id,
+	)
 
 	test_session.add(test_rental)
 	await test_session.commit()
 	await test_session.refresh(test_rental)
+
+	# eager loading
+	# https://docs.sqlalchemy.org/en/14/orm/loading_relationships.html#sqlalchemy.orm.joinedload
+	rental_query = select(Rental).where(Rental.id == test_rental.id).options(
+        joinedload(Rental.costumes),
+        joinedload(Rental.customers),
+        joinedload(Rental.employees),
+    )
+	test_rental = await test_session.scalar(rental_query)
 
 	return test_rental

@@ -148,7 +148,7 @@ async def delete_rental(
 		raise HTTPException(404, detail='Rental not registered.')
 
 	# Updating unavailable costume to available
-	db_costume = session.scalar(
+	db_costume = await session.scalar(
 		select(Costume).where(Costume.id == db_rental.costume_id)
 	)
 	db_costume.availability = CostumeAvailability.AVAILABLE

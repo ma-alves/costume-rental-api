@@ -31,9 +31,6 @@ async def read_employees(session: Session, skip: int = 0, limit: int = 100):
 
 	employees = employees_scalar.all()
 
-	if not employees:
-		raise HTTPException(404, detail='No employees registered.')
-
 	return {'employees': employees}
 
 

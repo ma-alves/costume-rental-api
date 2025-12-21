@@ -1,5 +1,7 @@
+import pytest
+
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import (
 	Costume,
@@ -10,13 +12,14 @@ from app.models import (
 from factories import CostumeFactory, CustomerFactory, EmployeeFactory
 
 
-def test_create_costume(test_session: Session):
+@pytest.mark.asyncio
+async def test_create_costume(test_session: AsyncSession):
 	new_costume = CostumeFactory()
 
 	test_session.add(new_costume)
-	test_session.commit()
+	await test_session.commit()
 
-	costume = test_session.scalar(
+	costume = await test_session.scalar(
 		select(Costume).where(Costume.id == new_costume.id)
 	)
 
@@ -29,13 +32,14 @@ def test_create_costume(test_session: Session):
 	)
 
 
-def test_create_employee(test_session: Session):
+@pytest.mark.asyncio
+async def test_create_employee(test_session: AsyncSession):
 	new_employee = EmployeeFactory()
 
 	test_session.add(new_employee)
-	test_session.commit()
+	await test_session.commit()
 
-	employee = test_session.scalar(
+	employee = await test_session.scalar(
 		select(Employee).where(Employee.id == new_employee.id)
 	)
 
@@ -45,13 +49,14 @@ def test_create_employee(test_session: Session):
 	assert employee.phone_number == new_employee.phone_number
 
 
-def test_create_customer(test_session: Session):
+@pytest.mark.asyncio
+async def test_create_customer(test_session: AsyncSession):
 	new_customer = CustomerFactory()
 
 	test_session.add(new_customer)
-	test_session.commit()
+	await test_session.commit()
 
-	customer = test_session.scalar(
+	customer = await test_session.scalar(
 		select(Customer).where(Customer.id == new_customer.id)
 	)
 
