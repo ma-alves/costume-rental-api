@@ -50,8 +50,8 @@ class Customer:
 
 
 @mapped_as_dataclass(table_registry)
-class Employee:
-	__tablename__ = 'employees'
+class User:
+	__tablename__ = 'users'
 
 	id: Mapped[int] = mapped_column(primary_key=True, init=False)
 	name: Mapped[str]
@@ -61,7 +61,7 @@ class Employee:
 	is_admin: Mapped[bool]
 
 	rental: Mapped[List['Rental']] = relationship(
-		back_populates='employees', init=False
+		back_populates='users', init=False
 	)
 
 
@@ -77,11 +77,11 @@ class Rental:
 	__tablename__ = 'rental'
 
 	id: Mapped[int] = mapped_column(primary_key=True, init=False)
-	employee_id: Mapped[int] = mapped_column(ForeignKey('employees.id'))
+	user_id: Mapped[int] = mapped_column(ForeignKey('users.id'))
 	customer_id: Mapped[int] = mapped_column(ForeignKey('customers.id'))
 	costume_id: Mapped[int] = mapped_column(ForeignKey('costumes.id'))
 
-	employees: Mapped['Employee'] = relationship(back_populates='rental', init=False)
+	users: Mapped['User'] = relationship(back_populates='rental', init=False)
 	customers: Mapped['Customer'] = relationship(back_populates='rental', init=False)
 	costumes: Mapped['Costume'] = relationship(back_populates='rental', init=False)
 

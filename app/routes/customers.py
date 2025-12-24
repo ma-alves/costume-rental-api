@@ -5,21 +5,21 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_session
-from app.models import Customer, Employee
+from app.models import Customer, User
 from app.schemas import CustomerSchema, CustomerList, Message
-from app.security import get_current_employee
+from app.security import get_current_user
 
 
 router = APIRouter(prefix='/customers', tags=['customers'])
 
-CurrentEmployee = Annotated[Employee, Depends(get_current_employee)]
+CurrentUser = Annotated[User, Depends(get_current_user)]
 Session = Annotated[AsyncSession, Depends(get_session)]
 
 
 @router.get('/', response_model=CustomerList)
 async def get_customers(
 	session: Session,
-	current_employee: CurrentEmployee,
+	current_user: CurrentUser,
 	skip: int = 0,
 	limit: int = 0,
 ):
@@ -31,7 +31,7 @@ async def get_customers(
 
 @router.get('/{customer_id}', response_model=CustomerSchema)
 async def get_customer(
-	session: Session, current_employee: CurrentEmployee, customer_id: int
+	session: Session, current_user: CurrentUser, customer_id: int
 ):
 	db_customer = await session.scalar(
 		select(Customer).where(Customer.id == customer_id)
@@ -46,7 +46,7 @@ async def get_customer(
 @router.post('/', response_model=CustomerSchema, status_code=201)
 async def create_customer(
 	session: Session,
-	current_employee: CurrentEmployee,
+	current_user: CurrentUser,
 	customer: CustomerSchema,
 ):
 	db_customer = await session.scalar(
@@ -73,7 +73,7 @@ async def create_customer(
 @router.put('/{customer_id}', response_model=CustomerSchema)
 async def update_customer(
 	session: Session,
-	current_employee: CurrentEmployee,
+	current_user: CurrentUser,
 	customer: CustomerSchema,
 	customer_id: int,
 ):
@@ -98,7 +98,7 @@ async def update_customer(
 
 @router.delete('/{customer_id}', response_model=Message)
 async def delete_customer(
-	session: Session, current_employee: CurrentEmployee, customer_id: int
+	session: Session, current_user: CurrentUser, customer_id: int
 ):
 	db_customer = await session.scalar(
 		select(Customer).where(Customer.id == customer_id)

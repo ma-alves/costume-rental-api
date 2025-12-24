@@ -6,11 +6,11 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_session
-from app.models import Employee
+from app.models import User
 from app.schemas import Token
 from app.security import (
 	create_access_token,
-	get_current_employee,
+	get_current_user,
 	verify_password_hash,
 )
 
@@ -21,23 +21,23 @@ router = APIRouter(prefix='/auth', tags=['auth'])
 
 @router.post('/token', response_model=Token)
 async def login_for_access_token(form_data: OAuth2Password, session: Session):
-	employee = await session.scalar(
-		select(Employee).where(Employee.email == form_data.username)
+	user = await session.scalar(
+		select(User).where(User.email == form_data.username)
 	)
 
-	if not employee:
-		raise HTTPException(404, detail='Employee not registered.')
+	if not user:
+		raise HTTPException(404, detail='User not registered.')
 
-	if not verify_password_hash(form_data.password, employee.password):
+	if not verify_password_hash(form_data.password, user.password):
 		raise HTTPException(400, detail='Incorrect email or password.')
 
-	access_token = create_access_token(data={'sub': employee.email})
+	access_token = create_access_token(data={'sub': user.email})
 
 	return {'access_token': access_token, 'token_type': 'bearer'}
 
 
 @router.post('/refresh_token', response_model=Token)
-def refresh_access_token(employee: Employee = Depends(get_current_employee)):
-	new_access_token = create_access_token(data={'sub': employee.email})
+def refresh_access_token(user: User = Depends(get_current_user)):
+	new_access_token = create_access_token(data={'sub': user.email})
 
 	return {'access_token': new_access_token, 'token_type': 'bearer'}

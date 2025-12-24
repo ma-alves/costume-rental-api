@@ -9,7 +9,7 @@ from app.models import (
 	Costume,
 	CostumeAvailability,
 	Customer,
-	Employee,
+	User,
 	Rental,
 )
 from app.schemas import (
@@ -19,12 +19,12 @@ from app.schemas import (
 	RentalSchema,
 	RentalPatch,
 )
-from app.security import get_current_employee
+from app.security import get_current_user
 
 
 router = APIRouter(prefix='/rental', tags=['rental'])
 
-CurrentEmployee = Annotated[Employee, Depends(get_current_employee)]
+CurrentUser = Annotated[User, Depends(get_current_user)]
 Session = Annotated[AsyncSession, Depends(get_session)]
 
 
@@ -32,7 +32,7 @@ def set_rental_attr(rental):
 	"""Set the models dictionaries in the json response. É uma gambiarra absurda desenvolvida através do desespero, em algum momento encontrarei uma solução melhor."""
 	setattr(rental, 'costume', rental.costumes.__dict__)
 	setattr(rental, 'customer', rental.customers.__dict__)
-	setattr(rental, 'employee', rental.employees.__dict__)
+	setattr(rental, 'user', rental.users.__dict__)
 
 	return rental
 
@@ -40,7 +40,7 @@ def set_rental_attr(rental):
 @router.get('/', response_model=RentalList)
 async def read_rental_list(
 	session: Session,
-	current_employee: CurrentEmployee,
+	current_user: CurrentUser,
 	skip: int = 0,
 	limit: int = 100,
 ):
@@ -56,7 +56,7 @@ async def read_rental_list(
 
 @router.get('/{rental_id}', response_model=RentalSchema)
 async def read_rental(
-	session: Session, current_employee: CurrentEmployee, rental_id: int
+	session: Session, current_user: CurrentUser, rental_id: int
 ):
 	db_rental = await session.scalar(select(Rental).where(Rental.id == rental_id))
 
@@ -70,7 +70,7 @@ async def read_rental(
 
 @router.post('/', response_model=RentalSchema, status_code=201)
 async def create_rental(
-	session: Session, current_employee: CurrentEmployee, rental: RentalInput
+	session: Session, current_user: CurrentUser, rental: RentalInput
 ):
 	# Costume code
 	db_costume = await session.scalar(
@@ -93,7 +93,7 @@ async def create_rental(
 
 	# Rental code
 	db_rental = Rental(
-		employee_id=current_employee.id,
+		user_id=current_user.id,
 		customer_id=db_customer.id,
 		costume_id=rental.costume_id,
 	)
@@ -110,7 +110,7 @@ async def create_rental(
 @router.patch('/{rental_id}', response_model=RentalSchema)
 async def patch_rental(
 	session: Session,
-	current_employee: CurrentEmployee,
+	current_user: CurrentUser,
 	rental_id: int,
 	rental: RentalPatch,
 ):
@@ -136,7 +136,7 @@ async def patch_rental(
 
 @router.delete('/{rental_id}', response_model=Message)
 async def delete_rental(
-	session: Session, current_employee: CurrentEmployee, rental_id: int
+	session: Session, current_user: CurrentUser, rental_id: int
 ):
 	db_rental = await session.scalar(select(Rental).where(Rental.id == rental_id))
 

@@ -13,7 +13,7 @@ from app.database import get_session
 from app.main import app
 from app.models import (
 	Costume,
-	Employee,
+	User,
 	Customer,
 	CostumeAvailability,
 	Rental,
@@ -24,7 +24,7 @@ from app.security import get_password_hash
 from factories import (
 	CostumeFactory,
 	CustomerFactory,
-	EmployeeFactory,
+	UserFactory,
 )
 
 
@@ -60,51 +60,51 @@ def client(test_session: Session):
 
 
 @pytest_asyncio.fixture
-async def employee(test_session: Session):
+async def user(test_session: Session):
 	password = 'test1234'
-	test_employee = EmployeeFactory(password=get_password_hash(password))
+	test_user = UserFactory(password=get_password_hash(password))
 
-	test_session.add(test_employee)
+	test_session.add(test_user)
 	await test_session.commit()
-	await test_session.refresh(test_employee)
+	await test_session.refresh(test_user)
 
-	test_employee.clean_password = 'test1234'
+	test_user.clean_password = 'test1234'
 
-	return test_employee
+	return test_user
 
 
 @pytest_asyncio.fixture
-async def other_employee(test_session: Session):
+async def other_user(test_session: Session):
 	password = 'test1234'
-	test_employee = EmployeeFactory(
+	test_user = UserFactory(
 		password=get_password_hash(password), is_admin=False
 	)
 
-	test_session.add(test_employee)
+	test_session.add(test_user)
 	await test_session.commit()
-	await test_session.refresh(test_employee)
+	await test_session.refresh(test_user)
 
-	test_employee.clean_password = 'test1234'
+	test_user.clean_password = 'test1234'
 
-	return test_employee
+	return test_user
 
 
 @pytest.fixture
-def token(client: TestClient, employee):
+def token(client: TestClient, user):
 	response = client.post(
 		'/auth/token',
-		data={'username': employee.email, 'password': employee.clean_password},
+		data={'username': user.email, 'password': user.clean_password},
 	)
 	return response.json()['access_token']
 
 
 @pytest.fixture
-def other_token(client: TestClient, other_employee):
+def other_token(client: TestClient, other_user):
 	response = client.post(
 		'/auth/token',
 		data={
-			'username': other_employee.email,
-			'password': other_employee.clean_password,
+			'username': other_user.email,
+			'password': other_user.clean_password,
 		},
 	)
 	return response.json()['access_token']
@@ -177,19 +177,19 @@ async def rental(test_session: Session):
 	await test_session.commit()
 	await test_session.refresh(customer)
 
-	employee = Employee(
+	user = User(
 		email='test@example.com',
 		password=get_password_hash('test1234'),
-		name='Test Employee',
+		name='Test User',
 		phone_number='12345678901',
 		is_admin=True,
 	)
-	test_session.add(employee)
+	test_session.add(user)
 	await test_session.commit()
-	await test_session.refresh(employee)
+	await test_session.refresh(user)
 
 	test_rental = Rental(
-		employee_id=employee.id,
+		user_id=user.id,
 		customer_id=customer.id,
 		costume_id=costume.id,
 	)
@@ -206,7 +206,7 @@ async def rental(test_session: Session):
 		.options(
 			joinedload(Rental.costumes),
 			joinedload(Rental.customers),
-			joinedload(Rental.employees),
+			joinedload(Rental.users),
 		)
 	)
 	test_rental = await test_session.scalar(rental_query)

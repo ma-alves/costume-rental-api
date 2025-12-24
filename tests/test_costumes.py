@@ -26,7 +26,7 @@ def test_get_costume_not_registered(client: TestClient):
 	assert response.json() == {'detail': 'Costume not registered.'}
 
 
-def test_create_costume(client: TestClient, employee, token):
+def test_create_costume(client: TestClient, user, token):
 	response = client.post(
 		'/costumes',
 		headers={'Authorization': f'Bearer {token}'},
@@ -47,7 +47,7 @@ def test_create_costume(client: TestClient, employee, token):
 	}
 
 
-def test_create_costume_already_exists(client: TestClient, employee, token):
+def test_create_costume_already_exists(client: TestClient, user, token):
 	first_response = client.post(
 		'/costumes',
 		headers={'Authorization': f'Bearer {token}'},
@@ -73,7 +73,7 @@ def test_create_costume_already_exists(client: TestClient, employee, token):
 	assert second_response.json() == {'detail': 'Costume already registered.'}
 
 
-def test_update_costume(client: TestClient, costume, employee, token):
+def test_update_costume(client: TestClient, costume, user, token):
 	response = client.put(
 		f'/costumes/{costume.id}',
 		headers={'Authorization': f'Bearer {token}'},
@@ -94,7 +94,7 @@ def test_update_costume(client: TestClient, costume, employee, token):
 	}
 
 
-def test_update_costume_not_registered(client: TestClient, employee, token):
+def test_update_costume_not_registered(client: TestClient, user, token):
 	response = client.put(
 		f'/costumes/404',
 		headers={'Authorization': f'Bearer {token}'},
@@ -109,7 +109,7 @@ def test_update_costume_not_registered(client: TestClient, employee, token):
 	assert response.json() == {'detail': 'Costume not registered.'}
 
 
-def test_delete_costume(client: TestClient, costume, employee, token):
+def test_delete_costume(client: TestClient, costume, user, token):
 	response = client.delete(
 		f'/costumes/{costume.id}',
 		headers={'Authorization': f'Bearer {token}'},
@@ -118,7 +118,7 @@ def test_delete_costume(client: TestClient, costume, employee, token):
 	assert response.json() == {'message': 'Costume deleted.'}
 
 
-def test_delete_costume_not_registered(client: TestClient, employee, token):
+def test_delete_costume_not_registered(client: TestClient, user, token):
 	response = client.delete(
 		f'/costumes/404',
 		headers={'Authorization': f'Bearer {token}'},
