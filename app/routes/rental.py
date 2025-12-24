@@ -29,7 +29,7 @@ Session = Annotated[AsyncSession, Depends(get_session)]
 
 
 def set_rental_attr(rental):
-	"""Set the models dictionaries in the json response."""
+	"""Set the models dictionaries in the json response. É uma gambiarra absurda desenvolvida através do desespero, em algum momento encontrarei uma solução melhor."""
 	setattr(rental, 'costume', rental.costumes.__dict__)
 	setattr(rental, 'customer', rental.customers.__dict__)
 	setattr(rental, 'employee', rental.employees.__dict__)
@@ -49,9 +49,7 @@ async def read_rental_list(
 	)
 	db_rental_list = db_rental_list_scalar.all()
 
-	rental_list = [
-		set_rental_attr(rental_obj) for rental_obj in db_rental_list
-	]
+	rental_list = [set_rental_attr(rental_obj) for rental_obj in db_rental_list]
 
 	return {'rental_list': rental_list}
 
@@ -80,15 +78,15 @@ async def create_rental(
 	)
 	if not db_costume:
 		raise HTTPException(400, detail='Costume not registered.')
-	
+
 	if db_costume.availability == CostumeAvailability.UNAVAILABLE:
 		raise HTTPException(400, detail='Costume unavailable.')
-	
+
 	db_costume.availability = CostumeAvailability.UNAVAILABLE
 
 	# Customer code
 	db_customer = await session.scalar(
-		select(Customer).where(Customer.cpf == rental.customer_cpf)
+		select(Customer).where(Customer.id == rental.customer_id)
 	)
 	if not db_customer:
 		raise HTTPException(400, detail='Customer not registered.')
@@ -117,7 +115,7 @@ async def patch_rental(
 	rental: RentalPatch,
 ):
 	db_rental = await session.scalar(select(Rental).where(Rental.id == rental_id))
-	
+
 	if not db_rental:
 		raise HTTPException(404, detail='Rental not registered.')
 
@@ -125,9 +123,7 @@ async def patch_rental(
 		setattr(db_rental, key, value)
 
 	if db_rental.return_date < db_rental.rental_date:
-		raise HTTPException(
-			400, detail="Rental date can't be later than return date."
-		)
+		raise HTTPException(400, detail="Rental date can't be later than return date.")
 
 	session.add(db_rental)
 	await session.commit()

@@ -25,9 +25,7 @@ Session = Annotated[AsyncSession, Depends(get_session)]
 
 @router.get('/', response_model=EmployeeList)
 async def read_employees(session: Session, skip: int = 0, limit: int = 100):
-	employees_scalar = await session.scalars(
-		select(Employee).offset(skip).limit(limit)
-	)
+	employees_scalar = await session.scalars(select(Employee).offset(skip).limit(limit))
 
 	employees = employees_scalar.all()
 
@@ -36,9 +34,7 @@ async def read_employees(session: Session, skip: int = 0, limit: int = 100):
 
 @router.get('/{employee_id}', response_model=EmployeeOutput, status_code=200)
 async def read_employee(session: Session, employee_id: int):
-	employee = await session.scalar(
-		select(Employee).where(Employee.id == employee_id)
-	)
+	employee = await session.scalar(select(Employee).where(Employee.id == employee_id))
 
 	if not employee:
 		raise HTTPException(404, detail='Employee not registered.')
@@ -81,12 +77,9 @@ async def update_employee(
 	employee: EmployeeInput,
 	employee_id: int,
 ):
-	if (
-		current_employee.id != employee_id
-		and current_employee.is_admin is False
-	):
+	if current_employee.id != employee_id and current_employee.is_admin is False:
 		raise HTTPException(status_code=400, detail='Not enough permissions')
-	
+
 	db_employee = await session.scalar(
 		select(Employee).where(Employee.id == employee_id)
 	)
@@ -105,12 +98,12 @@ async def update_employee(
 		await session.refresh(db_employee)
 
 		return db_employee
-	
+
 	except IntegrityError:
 		raise HTTPException(
-            status_code=HTTPStatus.CONFLICT,
-            detail='Username or Email already exists.',
-        )
+			status_code=HTTPStatus.CONFLICT,
+			detail='Username or Email already exists.',
+		)
 
 
 @router.delete('/{employee_id}', response_model=Message)
@@ -119,10 +112,7 @@ async def delete_employee(
 	session: Session,
 	employee_id: int,
 ):
-	if (
-		current_employee.id != employee_id
-		and current_employee.is_admin is False
-	):
+	if current_employee.id != employee_id and current_employee.is_admin is False:
 		raise HTTPException(status_code=400, detail='Not enough permissions')
 
 	db_employee = await session.scalar(

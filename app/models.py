@@ -3,10 +3,17 @@ from enum import Enum
 from typing import List, Optional
 
 from sqlalchemy import String, ForeignKey
-from sqlalchemy.orm import Mapped, mapped_column, relationship, mapped_as_dataclass, registry
+from sqlalchemy.orm import (
+	Mapped,
+	mapped_column,
+	relationship,
+	mapped_as_dataclass,
+	registry,
+)
 
 
 table_registry = registry()
+
 
 class CostumeAvailability(str, Enum):
 	AVAILABLE = 'available'
@@ -37,7 +44,9 @@ class Customer:
 	phone_number: Mapped[str] = mapped_column(String(11))
 	address: Mapped[str]
 
-	rental: Mapped[List['Rental']] = relationship(back_populates='customers', init=False)
+	rental: Mapped[List['Rental']] = relationship(
+		back_populates='customers', init=False
+	)
 
 
 @mapped_as_dataclass(table_registry)
@@ -51,7 +60,9 @@ class Employee:
 	phone_number: Mapped[Optional[str]] = mapped_column(String(11))
 	is_admin: Mapped[bool]
 
-	rental: Mapped[List['Rental']] = relationship(back_populates='employees', init=False)
+	rental: Mapped[List['Rental']] = relationship(
+		back_populates='employees', init=False
+	)
 
 
 @mapped_as_dataclass(table_registry)

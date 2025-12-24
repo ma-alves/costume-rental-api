@@ -23,20 +23,18 @@ async def get_customers(
 	skip: int = 0,
 	limit: int = 0,
 ):
-	customers_scalar = await session.scalars(
-		select(Customer).offset(skip).limit(limit)
-	)
+	customers_scalar = await session.scalars(select(Customer).offset(skip).limit(limit))
 	customers = customers_scalar.all()
 
 	return {'customers': customers}
 
 
-@router.get('/{customer_cpf}', response_model=CustomerSchema)
+@router.get('/{customer_id}', response_model=CustomerSchema)
 async def get_customer(
-	session: Session, current_employee: CurrentEmployee, customer_cpf: str
+	session: Session, current_employee: CurrentEmployee, customer_id: int
 ):
 	db_customer = await session.scalar(
-		select(Customer).where(Customer.cpf == customer_cpf)
+		select(Customer).where(Customer.id == customer_id)
 	)
 
 	if not db_customer:
@@ -72,15 +70,15 @@ async def create_customer(
 	return db_customer
 
 
-@router.put('/{customer_cpf}', response_model=CustomerSchema)
+@router.put('/{customer_id}', response_model=CustomerSchema)
 async def update_customer(
 	session: Session,
 	current_employee: CurrentEmployee,
 	customer: CustomerSchema,
-	customer_cpf: int,
+	customer_id: int,
 ):
 	db_customer = await session.scalar(
-		select(Customer).where(Customer.cpf == customer_cpf)
+		select(Customer).where(Customer.id == customer_id)
 	)
 
 	if not db_customer:
@@ -98,12 +96,12 @@ async def update_customer(
 	return db_customer
 
 
-@router.delete('/{customer_cpf}', response_model=Message)
+@router.delete('/{customer_id}', response_model=Message)
 async def delete_customer(
-	session: Session, current_employee: CurrentEmployee, customer_cpf: int
+	session: Session, current_employee: CurrentEmployee, customer_id: int
 ):
 	db_customer = await session.scalar(
-		select(Customer).where(Customer.cpf == customer_cpf)
+		select(Customer).where(Customer.id == customer_id)
 	)
 
 	if not db_customer:

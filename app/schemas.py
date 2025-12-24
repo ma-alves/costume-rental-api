@@ -89,7 +89,7 @@ class RentalList(BaseModel):
 
 class RentalInput(BaseModel):
 	costume_id: int
-	customer_cpf: int
+	customer_id: int
 
 
 class RentalPatch(BaseModel):

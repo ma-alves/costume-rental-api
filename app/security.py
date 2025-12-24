@@ -28,9 +28,7 @@ def verify_password_hash(plain_password: str, hashed_password: str):
 
 def create_access_token(data: dict):
 	to_encode = data.copy()
-	expire = datetime.utcnow() + timedelta(
-		days=settings.ACCESS_TOKEN_EXPIRE_DAYS
-	)
+	expire = datetime.utcnow() + timedelta(days=settings.ACCESS_TOKEN_EXPIRE_DAYS)
 	to_encode.update({'exp': expire})
 	encoded_jwt = encode(
 		payload=to_encode,

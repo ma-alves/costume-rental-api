@@ -67,6 +67,4 @@ class RentalFactory(factory.Factory):
 	customer_id = 1
 	costume_id = 1
 	rental_date = datetime.now()
-	return_date = factory.LazyAttribute(
-		lambda obj: obj.rental_date + timedelta(days=7)
-	)
+	return_date = factory.LazyAttribute(lambda obj: obj.rental_date + timedelta(days=7))

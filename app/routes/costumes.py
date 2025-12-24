@@ -23,9 +23,7 @@ async def query_costume_by_id(session: Session, costume_id):
 	)
 
 	if not query_db_costume:
-		raise HTTPException(
-			HTTPStatus.NOT_FOUND, detail='Costume not registered.'
-		)
+		raise HTTPException(HTTPStatus.NOT_FOUND, detail='Costume not registered.')
 
 	return query_db_costume
 
@@ -65,9 +63,7 @@ async def create_costume(
 	)
 
 	if db_costume:
-		raise HTTPException(
-			HTTPStatus.CONFLICT, detail='Costume already registered.'
-		)
+		raise HTTPException(HTTPStatus.CONFLICT, detail='Costume already registered.')
 
 	db_costume = Costume(
 		name=costume.name,

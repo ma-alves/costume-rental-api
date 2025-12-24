@@ -2,16 +2,14 @@ from fastapi.testclient import TestClient
 
 
 def test_get_customers(client: TestClient, employee, token):
-	response = client.get(
-		'/customers', headers={'Authorization': f'Bearer {token}'}
-	)
+	response = client.get('/customers', headers={'Authorization': f'Bearer {token}'})
 	assert response.status_code == 200
 	assert response.json() == {'customers': []}
 
 
 def test_get_customer(client: TestClient, customer, employee, token):
 	response = client.get(
-		f'/customers/{customer.cpf}',
+		f'/customers/{customer.id}',
 		headers={'Authorization': f'Bearer {token}'},
 	)
 	assert response.status_code == 200
@@ -55,9 +53,7 @@ def test_create_customer(client: TestClient, employee, token):
 	}
 
 
-def test_create_customer_already_registered(
-	client: TestClient, employee, token
-):
+def test_create_customer_already_registered(client: TestClient, employee, token):
 	first_response = client.post(
 		'/customers',
 		headers={'Authorization': f'Bearer {token}'},
@@ -87,7 +83,7 @@ def test_create_customer_already_registered(
 
 def test_update_customer(client: TestClient, customer, employee, token):
 	response = client.put(
-		f'/customers/{customer.cpf}',
+		f'/customers/{customer.id}',
 		headers={'Authorization': f'Bearer {token}'},
 		json={
 			'cpf': '00900900911',
@@ -125,7 +121,7 @@ def test_update_customer_not_registered(client: TestClient, employee, token):
 
 def test_delete_customer(client: TestClient, customer, employee, token):
 	response = client.delete(
-		f'/customers/{customer.cpf}',
+		f'/customers/{customer.id}',
 		headers={'Authorization': f'Bearer {token}'},
 	)
 	assert response.status_code == 200

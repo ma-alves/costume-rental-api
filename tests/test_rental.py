@@ -44,7 +44,7 @@ def test_create_rental(
 		headers={'Authorization': f'Bearer {token}'},
 		json={
 			'costume_id': available_costume.id,
-			'customer_cpf': customer.cpf,
+			'customer_id': customer.id,
 		},
 	)
 	assert response.status_code == 201
@@ -61,7 +61,7 @@ def test_create_rental_unavailable_costume(
 		headers={'Authorization': f'Bearer {token}'},
 		json={
 			'costume_id': unavailable_costume.id,
-			'customer_cpf': customer.cpf,
+			'customer_id': customer.id,
 		},
 	)
 	assert response.status_code == 400
@@ -74,7 +74,7 @@ def test_create_rental_costume_not_registered(
 	response = client.post(
 		'/rental',
 		headers={'Authorization': f'Bearer {token}'},
-		json={'costume_id': -1, 'customer_cpf': customer.cpf},
+		json={'costume_id': -1, 'customer_id': customer.id},
 	)
 	assert response.status_code == 400
 	assert response.json() == {'detail': 'Costume not registered.'}
@@ -86,11 +86,11 @@ def test_create_rental_customer_not_registered(
 	response = client.post(
 		'/rental',
 		headers={'Authorization': f'Bearer {token}'},
-		json={'costume_id': available_costume.id, 'customer_cpf': -1},
+		json={'costume_id': available_costume.id, 'customer_id': -1},
 	)
 	assert response.status_code == 400
 	assert response.json() == {'detail': 'Customer not registered.'}
-	
+
 
 # greenlet stuff not working on this, apparently different async and sync sessions
 # def test_patch_rental(client: TestClient, test_session, employee, token):
@@ -125,9 +125,7 @@ def test_patch_rental_not_registered(client: TestClient, employee, token):
 	assert response.json() == {'detail': 'Rental not registered.'}
 
 
-def test_patch_rental_wrong_datetime(
-	client: TestClient, employee, token, rental
-):
+def test_patch_rental_wrong_datetime(client: TestClient, employee, token, rental):
 	response = client.patch(
 		f'/rental/{rental.id}',
 		headers={'Authorization': f'Bearer {token}'},
@@ -137,9 +135,7 @@ def test_patch_rental_wrong_datetime(
 		},
 	)
 	assert response.status_code == 400
-	assert response.json() == {
-		'detail': "Rental date can't be later than return date."
-	}
+	assert response.json() == {'detail': "Rental date can't be later than return date."}
 
 
 def test_delete_rental(client: TestClient, employee, token, rental):

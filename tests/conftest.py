@@ -4,13 +4,21 @@ import pytest_asyncio
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+
 # from sqlalchemy import create_engine
-from sqlalchemy.orm import Session, joinedload #, sessionmaker
+from sqlalchemy.orm import Session, joinedload  # , sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.database import get_session
 from app.main import app
-from app.models import Costume, Employee, Customer, CostumeAvailability, Rental, table_registry
+from app.models import (
+	Costume,
+	Employee,
+	Customer,
+	CostumeAvailability,
+	Rental,
+	table_registry,
+)
 from app.security import get_password_hash
 
 from factories import (
@@ -31,8 +39,8 @@ async def test_session():
 	# Base.metadata.create_all(engine)
 	# yield TestSession()
 	# Base.metadata.drop_all(engine)
-	async with engine.begin() as conn: 
-		await conn.run_sync(table_registry.metadata.create_all) 
+	async with engine.begin() as conn:
+		await conn.run_sync(table_registry.metadata.create_all)
 	async with AsyncSession(engine, expire_on_commit=False) as session:
 		yield session
 	async with engine.begin() as conn:
@@ -192,11 +200,15 @@ async def rental(test_session: Session):
 
 	# eager loading
 	# https://docs.sqlalchemy.org/en/14/orm/loading_relationships.html#sqlalchemy.orm.joinedload
-	rental_query = select(Rental).where(Rental.id == test_rental.id).options(
-        joinedload(Rental.costumes),
-        joinedload(Rental.customers),
-        joinedload(Rental.employees),
-    )
+	rental_query = (
+		select(Rental)
+		.where(Rental.id == test_rental.id)
+		.options(
+			joinedload(Rental.costumes),
+			joinedload(Rental.customers),
+			joinedload(Rental.employees),
+		)
+	)
 	test_rental = await test_session.scalar(rental_query)
 
 	return test_rental
