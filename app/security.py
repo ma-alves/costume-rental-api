@@ -9,7 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .database import get_session
-from .models import Employee
+from .models import User
 from .schemas import TokenData
 from .settings import Settings
 
@@ -28,9 +28,7 @@ def verify_password_hash(plain_password: str, hashed_password: str):
 
 def create_access_token(data: dict):
 	to_encode = data.copy()
-	expire = datetime.utcnow() + timedelta(
-		days=settings.ACCESS_TOKEN_EXPIRE_DAYS
-	)
+	expire = datetime.utcnow() + timedelta(days=settings.ACCESS_TOKEN_EXPIRE_DAYS)
 	to_encode.update({'exp': expire})
 	encoded_jwt = encode(
 		payload=to_encode,
@@ -41,7 +39,7 @@ def create_access_token(data: dict):
 	return encoded_jwt
 
 
-async def get_current_employee(
+async def get_current_user(
 	session: AsyncSession = Depends(get_session),
 	token: str = Depends(oauth2_scheme),
 ):
@@ -64,11 +62,11 @@ async def get_current_employee(
 	except ExpiredSignatureError:
 		raise credentials_exception
 
-	employee = await session.scalar(
-		select(Employee).where(Employee.email == token_data.email)
+	user = await session.scalar(
+		select(User).where(User.email == token_data.email)
 	)
 
-	if employee is None:
+	if user is None:
 		raise credentials_exception
 
-	return employee
+	return user

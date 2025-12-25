@@ -1,22 +1,25 @@
+import pytest
+
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import (
 	Costume,
 	CostumeAvailability,
 	Customer,
-	Employee,
+	User,
 )
-from factories import CostumeFactory, CustomerFactory, EmployeeFactory
+from factories import CostumeFactory, CustomerFactory, UserFactory
 
 
-def test_create_costume(test_session: Session):
+@pytest.mark.asyncio
+async def test_create_costume(test_session: AsyncSession):
 	new_costume = CostumeFactory()
 
 	test_session.add(new_costume)
-	test_session.commit()
+	await test_session.commit()
 
-	costume = test_session.scalar(
+	costume = await test_session.scalar(
 		select(Costume).where(Costume.id == new_costume.id)
 	)
 
@@ -29,29 +32,31 @@ def test_create_costume(test_session: Session):
 	)
 
 
-def test_create_employee(test_session: Session):
-	new_employee = EmployeeFactory()
+@pytest.mark.asyncio
+async def test_create_user(test_session: AsyncSession):
+	new_user = UserFactory()
 
-	test_session.add(new_employee)
-	test_session.commit()
+	test_session.add(new_user)
+	await test_session.commit()
 
-	employee = test_session.scalar(
-		select(Employee).where(Employee.id == new_employee.id)
+	user = await test_session.scalar(
+		select(User).where(User.id == new_user.id)
 	)
 
-	assert employee.name == new_employee.name
-	assert employee.email == new_employee.email
-	assert employee.password == new_employee.password
-	assert employee.phone_number == new_employee.phone_number
+	assert user.name == new_user.name
+	assert user.email == new_user.email
+	assert user.password == new_user.password
+	assert user.phone_number == new_user.phone_number
 
 
-def test_create_customer(test_session: Session):
+@pytest.mark.asyncio
+async def test_create_customer(test_session: AsyncSession):
 	new_customer = CustomerFactory()
 
 	test_session.add(new_customer)
-	test_session.commit()
+	await test_session.commit()
 
-	customer = test_session.scalar(
+	customer = await test_session.scalar(
 		select(Customer).where(Customer.id == new_customer.id)
 	)
 

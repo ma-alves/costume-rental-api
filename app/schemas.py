@@ -20,8 +20,8 @@ class TokenData(BaseModel):
 	email: EmailStr | None = None
 
 
-# Employees
-class EmployeeInput(BaseModel):
+# Users
+class UserInput(BaseModel):
 	name: str
 	password: str
 	email: EmailStr
@@ -29,7 +29,7 @@ class EmployeeInput(BaseModel):
 	is_admin: bool = False
 
 
-class EmployeeOutput(BaseModel):
+class UserOutput(BaseModel):
 	id: int
 	name: str
 	email: EmailStr
@@ -37,8 +37,8 @@ class EmployeeOutput(BaseModel):
 	is_admin: bool
 
 
-class EmployeeList(BaseModel):
-	employees: List[EmployeeOutput]
+class UserList(BaseModel):
+	users: List[UserOutput]
 
 
 # Costumes
@@ -80,7 +80,7 @@ class RentalSchema(BaseModel):
 	return_date: datetime
 	costume: CostumeOutput
 	customer: CustomerSchema
-	employee: EmployeeOutput
+	user: UserOutput
 
 
 class RentalList(BaseModel):
@@ -89,7 +89,7 @@ class RentalList(BaseModel):
 
 class RentalInput(BaseModel):
 	costume_id: int
-	customer_cpf: int
+	customer_id: int
 
 
 class RentalPatch(BaseModel):

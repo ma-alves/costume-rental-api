@@ -6,14 +6,14 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_session
-from app.models import CostumeAvailability, Costume, Employee
+from app.models import CostumeAvailability, Costume, User
 from app.schemas import CostumeInput, CostumeList, CostumeOutput, Message
-from app.security import get_current_employee
+from app.security import get_current_user
 
 
 router = APIRouter(prefix='/costumes', tags=['costumes'])
 
-CurrentEmployee = Annotated[Employee, Depends(get_current_employee)]
+CurrentUser = Annotated[User, Depends(get_current_user)]
 Session = Annotated[AsyncSession, Depends(get_session)]
 
 
@@ -23,9 +23,7 @@ async def query_costume_by_id(session: Session, costume_id):
 	)
 
 	if not query_db_costume:
-		raise HTTPException(
-			HTTPStatus.NOT_FOUND, detail='Costume not registered.'
-		)
+		raise HTTPException(HTTPStatus.NOT_FOUND, detail='Costume not registered.')
 
 	return query_db_costume
 
@@ -57,7 +55,7 @@ async def get_costume(session: Session, costume_id: int):
 @router.post('/', response_model=CostumeOutput, status_code=HTTPStatus.CREATED)
 async def create_costume(
 	session: Session,
-	current_employee: CurrentEmployee,
+	current_user: CurrentUser,
 	costume: CostumeInput,
 ):
 	db_costume = await session.scalar(
@@ -65,9 +63,7 @@ async def create_costume(
 	)
 
 	if db_costume:
-		raise HTTPException(
-			HTTPStatus.CONFLICT, detail='Costume already registered.'
-		)
+		raise HTTPException(HTTPStatus.CONFLICT, detail='Costume already registered.')
 
 	db_costume = Costume(
 		name=costume.name,
@@ -86,7 +82,7 @@ async def create_costume(
 @router.put('/{costume_id}', response_model=CostumeOutput)
 async def update_costume(
 	session: Session,
-	current_employee: CurrentEmployee,
+	current_user: CurrentUser,
 	costume: CostumeInput,
 	costume_id: int,
 ):
@@ -105,7 +101,7 @@ async def update_costume(
 
 @router.delete('/{costume_id}', response_model=Message)
 async def delete_costume(
-	current_employee: CurrentEmployee,
+	current_user: CurrentUser,
 	session: Session,
 	costume_id: int,
 ):

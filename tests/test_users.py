@@ -1,18 +1,18 @@
 from http import HTTPStatus
 
 from fastapi.testclient import TestClient
-from app.models import Employee
+from app.models import User
 
 
-def test_read_employees(client: TestClient):
-	response = client.get('/employees')
+def test_read_users(client: TestClient):
+	response = client.get('/users')
 	assert response.status_code == HTTPStatus.OK
-	assert response.json() == {'employees': []}
+	assert response.json() == {'users': []}
 
 
-def test_create_employee(client: TestClient):
+def test_create_user(client: TestClient):
 	response = client.post(
-		'/employees',
+		'/users',
 		json={
 			'name': 'matheus',
 			'email': 'matheus@email.com',
@@ -31,9 +31,9 @@ def test_create_employee(client: TestClient):
 	}
 
 
-def test_create_employee_already_exists(client: TestClient):
+def test_create_user_already_exists(client: TestClient):
 	first_response = client.post(
-		'/employees',
+		'/users',
 		json={
 			'name': 'matheus',
 			'email': 'matheus@email.com',
@@ -43,7 +43,7 @@ def test_create_employee_already_exists(client: TestClient):
 		},
 	)
 	second_response = client.post(
-		'/employees',
+		'/users',
 		json={
 			'name': 'matheus',
 			'email': 'matheus@email.com',
@@ -54,30 +54,30 @@ def test_create_employee_already_exists(client: TestClient):
 	)
 	assert first_response.status_code == HTTPStatus.CREATED
 	assert second_response.status_code == HTTPStatus.BAD_REQUEST
-	assert second_response.json() == {'detail': 'Employee already registered.'}
+	assert second_response.json() == {'detail': 'User already registered.'}
 
 
-def test_read_employee(client: TestClient, employee):
-	response = client.get(f'/employees/{employee.id}')
+def test_read_user(client: TestClient, user):
+	response = client.get(f'/users/{user.id}')
 	assert response.status_code == HTTPStatus.OK
 	assert response.json() == {
-		'id': employee.id,
-		'name': f'{employee.name}',
-		'email': f'{employee.email}',
-		'phone_number': f'{employee.phone_number}',
+		'id': user.id,
+		'name': f'{user.name}',
+		'email': f'{user.email}',
+		'phone_number': f'{user.phone_number}',
 		'is_admin': True,
 	}
 
 
-def test_read_employee_not_registered(client: TestClient):
-	response = client.get('/employees/404')
+def test_read_user_not_registered(client: TestClient):
+	response = client.get('/users/404')
 	assert response.status_code == HTTPStatus.NOT_FOUND
-	assert response.json() == {'detail': 'Employee not registered.'}
+	assert response.json() == {'detail': 'User not registered.'}
 
 
-def test_update_employee(client: TestClient, employee: Employee, token: str):
+def test_update_user(client: TestClient, user: User, token: str):
 	response = client.put(
-		f'/employees/{employee.id}',
+		f'/users/{user.id}',
 		headers={'Authorization': f'Bearer {token}'},
 		json={
 			'name': 'yasmim',
@@ -89,19 +89,19 @@ def test_update_employee(client: TestClient, employee: Employee, token: str):
 	)
 	assert response.status_code == HTTPStatus.OK
 	assert response.json() == {
-		'id': employee.id,
-		'name': f'{employee.name}',
-		'email': f'{employee.email}',
-		'phone_number': f'{employee.phone_number}',
-		'is_admin': employee.is_admin,
+		'id': user.id,
+		'name': f'{user.name}',
+		'email': f'{user.email}',
+		'phone_number': f'{user.phone_number}',
+		'is_admin': user.is_admin,
 	}
 
 
-def test_update_employee_no_permission(
-	client: TestClient, other_employee: Employee, other_token: str
+def test_update_user_no_permission(
+	client: TestClient, other_user: User, other_token: str
 ):
 	response = client.put(
-		'/employees/400',
+		'/users/400',
 		headers={'Authorization': f'Bearer {other_token}'},
 		json={
 			'name': 'yasmim',
@@ -115,23 +115,23 @@ def test_update_employee_no_permission(
 	assert response.json() == {'detail': 'Not enough permissions'}
 
 
-def test_delete_employee(client: TestClient, employee: Employee, token: str):
+def test_delete_user(client: TestClient, user: User, token: str):
 	response = client.delete(
-		f'/employees/{employee.id}',
+		f'/users/{user.id}',
 		headers={'Authorization': f'Bearer {token}'},
 	)
 	assert response.status_code == HTTPStatus.OK
-	assert response.json() == {'message': 'Employee deleted.'}
+	assert response.json() == {'message': 'User deleted.'}
 
 
-def test_delete_employee_no_permission(
+def test_delete_user_no_permission(
 	client: TestClient,
-	employee: Employee,
-	other_employee: Employee,
+	user: User,
+	other_user: User,
 	other_token: str,
 ):
 	response_delete = client.delete(
-		f'/employees/{employee.id}',
+		f'/users/{user.id}',
 		headers={'Authorization': f'Bearer {other_token}'},
 	)
 	assert response_delete.status_code == HTTPStatus.BAD_REQUEST

@@ -8,14 +8,14 @@ from app.models import (
 	Costume,
 	CostumeAvailability,
 	Customer,
-	Employee,
+	User,
 	Rental,
 )
 
 
-class EmployeeFactory(factory.Factory):
+class UserFactory(factory.Factory):
 	class Meta:
-		model = Employee
+		model = User
 
 	# id = factory.Sequence(lambda n: n + 1)
 	name = factory.Faker('name', locale='pt_BR')
@@ -48,19 +48,23 @@ class CustomerFactory(factory.Factory):
 	address = factory.Faker('address', locale='pt_BR')
 
 
+# __init__() got unexpected argument 'users' | 'customers' | 'costumes'
+# then int(1) it is!
 class RentalFactory(factory.Factory):
 	class Meta:
 		model = Rental
 
-	employees = factory.SubFactory(EmployeeFactory)
-	customers = factory.SubFactory(CustomerFactory)
-	costumes = factory.SubFactory(CostumeFactory)
+	# users = factory.SubFactory(UserFactory)
+	# customers = factory.SubFactory(CustomerFactory)
+	# costumes = factory.SubFactory(CostumeFactory)
 
-	# id = factory.Sequence(lambda n: n + 1)
-	employee_id = factory.SelfAttribute('employees.id')
-	customer_id = factory.SelfAttribute('customers.id')
-	costume_id = factory.SelfAttribute('costumes.id')
+	# # id = factory.Sequence(lambda n: n + 1)
+	# user_id = factory.SelfAttribute('users.id')
+	# customer_id = factory.SelfAttribute('customers.id')
+	# costume_id = factory.SelfAttribute('costumes.id')
+
+	user_id = 1
+	customer_id = 1
+	costume_id = 1
 	rental_date = datetime.now()
-	return_date = factory.LazyAttribute(
-		lambda obj: obj.rental_date + timedelta(days=7)
-	)
+	return_date = factory.LazyAttribute(lambda obj: obj.rental_date + timedelta(days=7))
