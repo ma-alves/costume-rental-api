@@ -14,9 +14,9 @@ jobs:
       SECRET_KEY: ${{ secrets.SECRET_KEY }}
       ALGORITHM: ${{ secrets.ALGORITHM }}
       ACCESS_TOKEN_EXPIRE_DAYS: ${{ secrets.ACCESS_TOKEN_EXPIRE_DAYS }}
-      POSTGRES_DB: ${{ POSTGRES_DB }}
-      POSTGRES_USER: ${{ POSTGRES_USER }}
-      POSTGRES_PASSWORD: ${{ POSTGRES_PASSWORD }}
+      POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+      POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+      POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
 
     services:
       db:
