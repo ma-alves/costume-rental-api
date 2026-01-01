@@ -21,9 +21,7 @@ router = APIRouter(prefix='/auth', tags=['auth'])
 
 @router.post('/token', response_model=Token)
 async def login_for_access_token(form_data: OAuth2Password, session: Session):
-	user = await session.scalar(
-		select(User).where(User.email == form_data.username)
-	)
+	user = await session.scalar(select(User).where(User.email == form_data.username))
 
 	if not user:
 		raise HTTPException(404, detail='User not registered.')

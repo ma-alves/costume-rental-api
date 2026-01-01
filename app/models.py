@@ -2,15 +2,14 @@ from datetime import datetime, timedelta
 from enum import Enum
 from typing import List, Optional
 
-from sqlalchemy import String, ForeignKey
+from sqlalchemy import ForeignKey, String
 from sqlalchemy.orm import (
 	Mapped,
-	mapped_column,
-	relationship,
 	mapped_as_dataclass,
+	mapped_column,
 	registry,
+	relationship,
 )
-
 
 table_registry = registry()
 
@@ -18,6 +17,7 @@ table_registry = registry()
 class CostumeAvailability(str, Enum):
 	AVAILABLE = 'available'
 	UNAVAILABLE = 'unavailable'
+	UNRETURNED = 'unreturned'
 
 
 @mapped_as_dataclass(table_registry)
@@ -60,9 +60,7 @@ class User:
 	phone_number: Mapped[Optional[str]] = mapped_column(String(11))
 	is_admin: Mapped[bool]
 
-	rental: Mapped[List['Rental']] = relationship(
-		back_populates='users', init=False
-	)
+	rental: Mapped[List['Rental']] = relationship(back_populates='users', init=False)
 
 
 @mapped_as_dataclass(table_registry)

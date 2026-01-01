@@ -34,11 +34,6 @@ services:
          initial_sync: true
        - action: rebuild
          path: uv.lock
-   environment:
-     DATABASE_URL: postgresql+psycopg://postgres:postgres@db:5432/appdb
-     SECRET_KEY: ${SECRET_KEY}
-     ALGORITHM: ${ALGORITHM}
-     ACCESS_TOKEN_EXPIRE_DAYS: ${ACCESS_TOKEN_EXPIRE_DAYS}
    env_file:
      - .env
 

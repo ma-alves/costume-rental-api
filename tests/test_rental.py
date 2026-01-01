@@ -1,9 +1,6 @@
-import pytest
-
 from fastapi.testclient import TestClient
 
 from app.routes.rental import set_rental_attr
-from tests.factories import RentalFactory
 
 
 def test_read_rental(client: TestClient, user, token, rental):
@@ -36,9 +33,7 @@ def test_read_rental_list(client: TestClient, user, token):
 	assert response.json() == {'rental_list': []}
 
 
-def test_create_rental(
-	client: TestClient, user, token, available_costume, customer
-):
+def test_create_rental(client: TestClient, user, token, available_costume, customer):
 	response = client.post(
 		'/rental',
 		headers={'Authorization': f'Bearer {token}'},

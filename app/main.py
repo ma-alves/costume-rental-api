@@ -1,8 +1,7 @@
-from .schemas import Message
-from .routes import users, auth, costumes, customers, rental
-
 from fastapi import FastAPI
 
+from .routes import auth, costumes, customers, rental, users
+from .schemas import Message
 
 app = FastAPI()
 

@@ -62,9 +62,7 @@ async def get_current_user(
 	except ExpiredSignatureError:
 		raise credentials_exception
 
-	user = await session.scalar(
-		select(User).where(User.email == token_data.email)
-	)
+	user = await session.scalar(select(User).where(User.email == token_data.email))
 
 	if user is None:
 		raise credentials_exception

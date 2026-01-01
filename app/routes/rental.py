@@ -9,18 +9,17 @@ from app.models import (
 	Costume,
 	CostumeAvailability,
 	Customer,
-	User,
 	Rental,
+	User,
 )
 from app.schemas import (
 	Message,
 	RentalInput,
 	RentalList,
-	RentalSchema,
 	RentalPatch,
+	RentalSchema,
 )
 from app.security import get_current_user
-
 
 router = APIRouter(prefix='/rental', tags=['rental'])
 
@@ -55,9 +54,7 @@ async def read_rental_list(
 
 
 @router.get('/{rental_id}', response_model=RentalSchema)
-async def read_rental(
-	session: Session, current_user: CurrentUser, rental_id: int
-):
+async def read_rental(session: Session, current_user: CurrentUser, rental_id: int):
 	db_rental = await session.scalar(select(Rental).where(Rental.id == rental_id))
 
 	if not db_rental:
@@ -135,9 +132,7 @@ async def patch_rental(
 
 
 @router.delete('/{rental_id}', response_model=Message)
-async def delete_rental(
-	session: Session, current_user: CurrentUser, rental_id: int
-):
+async def delete_rental(session: Session, current_user: CurrentUser, rental_id: int):
 	db_rental = await session.scalar(select(Rental).where(Rental.id == rental_id))
 
 	if not db_rental:

@@ -8,8 +8,8 @@ from app.models import (
 	Costume,
 	CostumeAvailability,
 	Customer,
-	User,
 	Rental,
+	User,
 )
 
 

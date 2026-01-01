@@ -6,9 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_session
 from app.models import Customer, User
-from app.schemas import CustomerSchema, CustomerList, Message
+from app.schemas import CustomerList, CustomerSchema, Message
 from app.security import get_current_user
-
 
 router = APIRouter(prefix='/customers', tags=['customers'])
 
@@ -30,9 +29,7 @@ async def get_customers(
 
 
 @router.get('/{customer_id}', response_model=CustomerSchema)
-async def get_customer(
-	session: Session, current_user: CurrentUser, customer_id: int
-):
+async def get_customer(session: Session, current_user: CurrentUser, customer_id: int):
 	db_customer = await session.scalar(
 		select(Customer).where(Customer.id == customer_id)
 	)
