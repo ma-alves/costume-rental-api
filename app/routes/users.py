@@ -9,13 +9,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_session
 from app.models import User
 from app.schemas import (
+	Message,
 	UserInput,
 	UserList,
 	UserOutput,
-	Message,
 )
-from app.security import get_password_hash, get_current_user
-
+from app.security import get_current_user, get_password_hash
 
 router = APIRouter(prefix='/users', tags=['users'])
 
@@ -47,9 +46,7 @@ async def create_user(user: UserInput, session: Session):
 	"""
 	Open endpoint so anyone can test the API's permissions.
 	"""
-	db_user = await session.scalar(
-		select(User).where(User.email == user.email)
-	)
+	db_user = await session.scalar(select(User).where(User.email == user.email))
 	if db_user:
 		raise HTTPException(400, detail='User already registered.')
 
@@ -80,9 +77,7 @@ async def update_user(
 	if current_user.id != user_id and current_user.is_admin is False:
 		raise HTTPException(status_code=400, detail='Not enough permissions')
 
-	db_user = await session.scalar(
-		select(User).where(User.id == user_id)
-	)
+	db_user = await session.scalar(select(User).where(User.id == user_id))
 
 	if not db_user:
 		raise HTTPException(404, detail='User not registered.')
@@ -115,9 +110,7 @@ async def delete_user(
 	if current_user.id != user_id and current_user.is_admin is False:
 		raise HTTPException(status_code=400, detail='Not enough permissions')
 
-	db_user = await session.scalar(
-		select(User).where(User.id == user_id)
-	)
+	db_user = await session.scalar(select(User).where(User.id == user_id))
 
 	if not db_user:
 		raise HTTPException(404, detail='User not registered.')

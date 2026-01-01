@@ -1,6 +1,10 @@
 import pytest
 import pytest_asyncio
-
+from factories import (
+	CostumeFactory,
+	CustomerFactory,
+	UserFactory,
+)
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
@@ -13,19 +17,13 @@ from app.database import get_session
 from app.main import app
 from app.models import (
 	Costume,
-	User,
-	Customer,
 	CostumeAvailability,
+	Customer,
 	Rental,
+	User,
 	table_registry,
 )
 from app.security import get_password_hash
-
-from factories import (
-	CostumeFactory,
-	CustomerFactory,
-	UserFactory,
-)
 
 
 @pytest_asyncio.fixture
@@ -76,9 +74,7 @@ async def user(test_session: Session):
 @pytest_asyncio.fixture
 async def other_user(test_session: Session):
 	password = 'test1234'
-	test_user = UserFactory(
-		password=get_password_hash(password), is_admin=False
-	)
+	test_user = UserFactory(password=get_password_hash(password), is_admin=False)
 
 	test_session.add(test_user)
 	await test_session.commit()

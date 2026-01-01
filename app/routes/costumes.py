@@ -6,10 +6,9 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_session
-from app.models import CostumeAvailability, Costume, User
+from app.models import Costume, CostumeAvailability, User
 from app.schemas import CostumeInput, CostumeList, CostumeOutput, Message
 from app.security import get_current_user
-
 
 router = APIRouter(prefix='/costumes', tags=['costumes'])
 
