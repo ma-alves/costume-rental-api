@@ -1,5 +1,5 @@
 # Costume Rental API
-It is a RESTful API for costume rental with JWT Authentication using Python, FastAPI and PostgreSQL as its core technologies.
+It is a RESTful API for a costume rental service using Python, FastAPI and PostgreSQL as its core technologies, as well as JWT for authentication and Pytest for testing.
 
 ## Tech Stack
 - [FastAPI](https://fastapi.tiangolo.com/) - Web Framework
