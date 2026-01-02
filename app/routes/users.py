@@ -74,7 +74,7 @@ async def update_user(
 	user: UserInput,
 	user_id: int,
 ):
-	if current_user.id != user_id and current_user.is_admin is False:
+	if current_user.id != user_id or not current_user.is_admin:
 		raise HTTPException(status_code=400, detail='Not enough permissions')
 
 	db_user = await session.scalar(select(User).where(User.id == user_id))
@@ -87,7 +87,7 @@ async def update_user(
 		db_user.password = get_password_hash(user.password)
 		db_user.email = user.email
 		db_user.phone_number = user.phone_number
-		db_user.is_admin = user.is_admin
+		db_user.is_admin = False if not current_user.is_admin else user.is_admin
 
 		await session.commit()
 		await session.refresh(db_user)
@@ -107,7 +107,7 @@ async def delete_user(
 	session: Session,
 	user_id: int,
 ):
-	if current_user.id != user_id and current_user.is_admin is False:
+	if current_user.id != user_id or not current_user.is_admin:
 		raise HTTPException(status_code=400, detail='Not enough permissions')
 
 	db_user = await session.scalar(select(User).where(User.id == user_id))

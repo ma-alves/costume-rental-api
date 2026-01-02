@@ -33,6 +33,7 @@ async def test_session():
 		connect_args={'check_same_thread': False},
 		poolclass=StaticPool,
 	)
+	# Legado de código para SQLite síncrono, NÃO APAGAR! Ref importante
 	# TestSession = sessionmaker(bind=engine)
 	# Base.metadata.create_all(engine)
 	# yield TestSession()
