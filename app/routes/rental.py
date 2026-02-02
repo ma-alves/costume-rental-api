@@ -28,7 +28,10 @@ Session = Annotated[AsyncSession, Depends(get_session)]
 
 
 def set_rental_attr(rental):
-	"""Set the models dictionaries in the json response. É uma gambiarra absurda desenvolvida através do desespero, em algum momento encontrarei uma solução melhor."""
+	"""Set the models dictionaries in the json response.
+	É uma gambiarra absurda desenvolvida através do desespero,
+	em algum momento encontrarei uma solução melhor.
+	"""
 	setattr(rental, 'costume', rental.costumes.__dict__)
 	setattr(rental, 'customer', rental.customers.__dict__)
 	setattr(rental, 'user', rental.users.__dict__)
@@ -104,6 +107,7 @@ async def create_rental(
 	return db_rental
 
 
+# Não funciona por causa da dependência 'greenlet'. Aparenta ser erro no contexto assíncrono.
 @router.patch('/{rental_id}', response_model=RentalSchema)
 async def patch_rental(
 	session: Session,

@@ -1,3 +1,5 @@
+# OAuth2 + JWT direto da documentação do FastAPI, utilizar como ref
+
 from datetime import datetime, timedelta
 
 from fastapi import Depends, HTTPException, status
@@ -28,7 +30,9 @@ def verify_password_hash(plain_password: str, hashed_password: str):
 
 def create_access_token(data: dict):
 	to_encode = data.copy()
-	expire = datetime.utcnow() + timedelta(days=settings.ACCESS_TOKEN_EXPIRE_DAYS)
+	expire = datetime.utcnow() + timedelta(
+		days=settings.ACCESS_TOKEN_EXPIRE_DAYS
+	)  # utcnow deprecated
 	to_encode.update({'exp': expire})
 	encoded_jwt = encode(
 		payload=to_encode,
