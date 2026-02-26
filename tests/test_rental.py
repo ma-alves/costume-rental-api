@@ -6,7 +6,7 @@ from tests.factories import RentalFactory
 
 def test_read_rental(client: TestClient, user, token, rental):
 	response = client.get(
-		f'/rental/{rental.id}',
+		f'/api/v1/rental/{rental.id}',
 		headers={'Authorization': f'Bearer {token}'},
 	)
 	set_rental_attr(rental)
@@ -18,7 +18,7 @@ def test_read_rental(client: TestClient, user, token, rental):
 
 def test_read_rental_not_registered(client: TestClient, user, token):
 	response = client.get(
-		'/rental/404',
+		'/api/v1/rental/404',
 		headers={'Authorization': f'Bearer {token}'},
 	)
 	assert response.status_code == 404
@@ -27,7 +27,7 @@ def test_read_rental_not_registered(client: TestClient, user, token):
 
 def test_read_rental_list(client: TestClient, user, token):
 	response = client.get(
-		'/rental',
+		'/api/v1/rental',
 		headers={'Authorization': f'Bearer {token}'},
 	)
 	assert response.status_code == 200
@@ -36,7 +36,7 @@ def test_read_rental_list(client: TestClient, user, token):
 
 def test_create_rental(client: TestClient, user, token, available_costume, customer):
 	response = client.post(
-		'/rental',
+		'/api/v1/rental',
 		headers={'Authorization': f'Bearer {token}'},
 		json={
 			'costume_id': available_costume.id,
@@ -53,7 +53,7 @@ def test_create_rental_unavailable_costume(
 	client: TestClient, user, token, unavailable_costume, customer
 ):
 	response = client.post(
-		'/rental',
+		'/api/v1/rental',
 		headers={'Authorization': f'Bearer {token}'},
 		json={
 			'costume_id': unavailable_costume.id,
@@ -68,7 +68,7 @@ def test_create_rental_costume_not_registered(
 	client: TestClient, user, token, customer
 ):
 	response = client.post(
-		'/rental',
+		'/api/v1/rental',
 		headers={'Authorization': f'Bearer {token}'},
 		json={'costume_id': -1, 'customer_id': customer.id},
 	)
@@ -80,7 +80,7 @@ def test_create_rental_customer_not_registered(
 	client: TestClient, available_costume, user, token
 ):
 	response = client.post(
-		'/rental',
+		'/api/v1/rental',
 		headers={'Authorization': f'Bearer {token}'},
 		json={'costume_id': available_costume.id, 'customer_id': -1},
 	)
@@ -91,7 +91,7 @@ def test_create_rental_customer_not_registered(
 # greenlet stuff not working on this, apparently different async and sync sessions
 # def test_patch_rental(client: TestClient, user, token, rental):
 # 	response = client.patch(
-# 		f'/rental/{rental.id}',
+# 		f'/api/v1/rental/{rental.id}',
 # 		headers={'Authorization': f'Bearer {token}'},
 # 		json={
 # 			'rental_date': '2024-07-02T20:13:35.454321',
@@ -106,7 +106,7 @@ def test_create_rental_customer_not_registered(
 
 def test_patch_rental_not_registered(client: TestClient, user, token):
 	response = client.patch(
-		'/rental/404',
+		'/api/v1/rental/404',
 		headers={'Authorization': f'Bearer {token}'},
 		json={
 			'rental_date': '2024-07-02T20:13:35.454321',
@@ -119,7 +119,7 @@ def test_patch_rental_not_registered(client: TestClient, user, token):
 
 def test_patch_rental_wrong_datetime(client: TestClient, user, token, rental):
 	response = client.patch(
-		f'/rental/{rental.id}',
+		f'/api/v1/rental/{rental.id}',
 		headers={'Authorization': f'Bearer {token}'},
 		json={
 			'rental_date': '2024-07-02T20:13:35.454321',
@@ -132,7 +132,7 @@ def test_patch_rental_wrong_datetime(client: TestClient, user, token, rental):
 
 def test_delete_rental(client: TestClient, user, token, rental):
 	response = client.delete(
-		f'/rental/{rental.id}',
+		f'/api/v1/rental/{rental.id}',
 		headers={'Authorization': f'Bearer {token}'},
 	)
 	assert response.status_code == 200
@@ -143,7 +143,7 @@ def test_delete_rental(client: TestClient, user, token, rental):
 
 def test_delete_rental_not_registered(client: TestClient, user, token):
 	response = client.delete(
-		'/rental/404',
+		'/api/v1/rental/404',
 		headers={'Authorization': f'Bearer {token}'},
 	)
 	assert response.status_code == 404

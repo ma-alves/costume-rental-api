@@ -26,6 +26,8 @@ from app.models import (
 from app.security import get_password_hash
 
 
+# teste local em SQLite assíncrono pois o processo 
+# é teimoso (refazer cenário e explicar)
 @pytest_asyncio.fixture
 async def test_session():
 	engine = create_async_engine(
@@ -33,7 +35,7 @@ async def test_session():
 		connect_args={'check_same_thread': False},
 		poolclass=StaticPool,
 	)
-	# Legado de código para SQLite síncrono, NÃO APAGAR! Ref importante
+	# legado de código para SQLite síncrono, NÃO APAGAR! Ref importante
 	# TestSession = sessionmaker(bind=engine)
 	# Base.metadata.create_all(engine)
 	# yield TestSession()
@@ -89,7 +91,7 @@ async def other_user(test_session: Session):
 @pytest.fixture
 def token(client: TestClient, user):
 	response = client.post(
-		'/auth/token',
+		'/api/v1/auth/token',
 		data={'username': user.email, 'password': user.clean_password},
 	)
 	return response.json()['access_token']
@@ -98,7 +100,7 @@ def token(client: TestClient, user):
 @pytest.fixture
 def other_token(client: TestClient, other_user):
 	response = client.post(
-		'/auth/token',
+		'/api/v1/auth/token',
 		data={
 			'username': other_user.email,
 			'password': other_user.clean_password,

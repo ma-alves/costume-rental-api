@@ -164,4 +164,4 @@ cython_debug/
 database.db
 notas.txt
 .ruff_cache
-docker-compose.yaml
+old-dockerfile.txt

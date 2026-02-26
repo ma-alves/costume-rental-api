@@ -9,7 +9,7 @@ from app.models import Customer, User
 from app.schemas import CustomerList, CustomerSchema, Message
 from app.security import get_current_user
 
-router = APIRouter(prefix='/customers', tags=['customers'])
+router = APIRouter(prefix='/api/v1/customers', tags=['customers'])
 
 CurrentUser = Annotated[User, Depends(get_current_user)]
 Session = Annotated[AsyncSession, Depends(get_session)]

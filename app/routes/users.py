@@ -16,7 +16,7 @@ from app.schemas import (
 )
 from app.security import get_current_user, get_password_hash
 
-router = APIRouter(prefix='/users', tags=['users'])
+router = APIRouter(prefix='/api/v1/users', tags=['users'])
 
 CurrentUser = Annotated[User, Depends(get_current_user)]
 Session = Annotated[AsyncSession, Depends(get_session)]

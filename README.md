@@ -28,36 +28,36 @@ docker compose up --build
 
 ## API Endpoints
 ### Auth
-**POST /auth/token** : Login for access token \
-**POST /auto/refresh_token** : Refresh access token
+**POST /api/v1/auth/token** : Login for access token \
+**POST /api/v1/auto/refresh_token** : Refresh access token
 
 ### Users
-**GET /users/** : Read users \
-**POST /users/** : Create user \
-**GET /users/{user_id}** : Read user \
-**PUT /users/{user_id}** : Update user \
-**DELETE /users/{user_id}** : Delete user 
+**GET /api/v1/users/** : Read users \
+**POST /api/v1/users/** : Create user \
+**GET /api/v1/users/{user_id}** : Read user \
+**PUT /api/v1/users/{user_id}** : Update user \
+**DELETE /api/v1/users/{user_id}** : Delete user 
 
 ### Costumes
-**GET /costumes/** : Get costumes \
-**POST /costumes/** : Create costume \
-**GET /costumes/{costume_id}** : Get costume \
-**GET /costumes/{costume_id}** : Update costume \
-**DELETE /costumes/{costume_id}** : Delete costume
+**GET /api/v1/costumes/** : Get costumes \
+**POST /api/v1/costumes/** : Create costume \
+**GET /api/v1/costumes/{costume_id}** : Get costume \
+**GET /api/v1/costumes/{costume_id}** : Update costume \
+**DELETE /api/v1/costumes/{costume_id}** : Delete costume
 
 ### Customers
-**GET /customers/** Get Customers \
-**POST /customers/** Create Customer \
-**GET /customers/{customer_id}** Get Customer \
-**PUT /customers/{customer_id}** Update Customer \
-**DELETE /customers/{customer_id}** Delete Customer
+**GET /api/v1/customers/** Get Customers \
+**POST /api/v1/customers/** Create Customer \
+**GET /api/v1/customers/{customer_id}** Get Customer \
+**PUT /api/v1/customers/{customer_id}** Update Customer \
+**DELETE /api/v1/customers/{customer_id}** Delete Customer
 
 ### Rental
-**GET /rental/** : Read Rental List \
-**POST /rental/** : Create Rental \
-**GET /rental/{rental_id}** : Read Rental \
-**PATCH /rental/{rental_id}** : Patch Rental [broken] \
-**DELETE /rental/{rental_id}** : Delete Rental
+**GET /api/v1/rental/** : Read Rental List \
+**POST /api/v1/rental/** : Create Rental \
+**GET /api/v1/rental/{rental_id}** : Read Rental \
+**PATCH /api/v1/rental/{rental_id}** : Patch Rental [broken] \
+**DELETE /api/v1/rental/{rental_id}** : Delete Rental
 
 ## Examples
 ### List Costumes

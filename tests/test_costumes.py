@@ -4,13 +4,13 @@ from fastapi.testclient import TestClient
 
 
 def test_get_costumes(client: TestClient):
-	response = client.get('/costumes')
+	response = client.get('/api/v1/costumes')
 	assert response.status_code == 200
 	assert response.json() == {'costumes': []}
 
 
 def test_get_costume(client: TestClient, costume):
-	response = client.get(f'/costumes/{costume.id}')
+	response = client.get(f'/api/v1/costumes/{costume.id}')
 	assert response.status_code == 200
 	assert response.json() == {
 		'id': costume.id,
@@ -22,14 +22,14 @@ def test_get_costume(client: TestClient, costume):
 
 
 def test_get_costume_not_registered(client: TestClient):
-	response = client.get(f'/costumes/404')
+	response = client.get(f'/api/v1/costumes/404')
 	assert response.status_code == 404
 	assert response.json() == {'detail': 'Costume not registered.'}
 
 
 def test_create_costume(client: TestClient, user, token):
 	response = client.post(
-		'/costumes',
+		'/api/v1/costumes',
 		headers={'Authorization': f'Bearer {token}'},
 		json={
 			'name': 'Dinossauro',
@@ -50,7 +50,7 @@ def test_create_costume(client: TestClient, user, token):
 
 def test_create_costume_already_exists(client: TestClient, user, token):
 	first_response = client.post(
-		'/costumes',
+		'/api/v1/costumes',
 		headers={'Authorization': f'Bearer {token}'},
 		json={
 			'name': 'Dinossauro',
@@ -60,7 +60,7 @@ def test_create_costume_already_exists(client: TestClient, user, token):
 		},
 	)
 	second_response = client.post(
-		'/costumes',
+		'/api/v1/costumes',
 		headers={'Authorization': f'Bearer {token}'},
 		json={
 			'name': 'Dinossauro',
@@ -76,7 +76,7 @@ def test_create_costume_already_exists(client: TestClient, user, token):
 
 def test_update_costume(client: TestClient, costume, user, token):
 	response = client.put(
-		f'/costumes/{costume.id}',
+		f'/api/v1/costumes/{costume.id}',
 		headers={'Authorization': f'Bearer {token}'},
 		json={
 			'name': 'Updated name',
@@ -97,7 +97,7 @@ def test_update_costume(client: TestClient, costume, user, token):
 
 def test_update_costume_not_registered(client: TestClient, user, token):
 	response = client.put(
-		f'/costumes/404',
+		f'/api/v1/costumes/404',
 		headers={'Authorization': f'Bearer {token}'},
 		json={
 			'name': 'Updated name',
@@ -112,7 +112,7 @@ def test_update_costume_not_registered(client: TestClient, user, token):
 
 def test_delete_costume(client: TestClient, costume, user, token):
 	response = client.delete(
-		f'/costumes/{costume.id}',
+		f'/api/v1/costumes/{costume.id}',
 		headers={'Authorization': f'Bearer {token}'},
 	)
 	assert response.status_code == 200
@@ -121,7 +121,7 @@ def test_delete_costume(client: TestClient, costume, user, token):
 
 def test_delete_costume_not_registered(client: TestClient, user, token):
 	response = client.delete(
-		f'/costumes/404',
+		f'/api/v1/costumes/404',
 		headers={'Authorization': f'Bearer {token}'},
 	)
 	assert response.status_code == 404

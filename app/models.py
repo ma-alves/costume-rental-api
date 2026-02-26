@@ -65,13 +65,6 @@ class User:
 
 @mapped_as_dataclass(table_registry)
 class Rental:
-	"""
-	Neste formato o cliente não tem relação direta com o funcionário,
-	apenas com o aluguel, que pelo seu registro liga o cliente ao
-	funcionário indiretamente. Essa relação também ocorre da mesma
-	forma com a fantasia, tendo a tabela 'Rental' como centro.
-	"""
-
 	__tablename__ = 'rental'
 
 	id: Mapped[int] = mapped_column(primary_key=True, init=False)

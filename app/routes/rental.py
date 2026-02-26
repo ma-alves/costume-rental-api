@@ -21,7 +21,7 @@ from app.schemas import (
 )
 from app.security import get_current_user
 
-router = APIRouter(prefix='/rental', tags=['rental'])
+router = APIRouter(prefix='/api/v1/rental', tags=['rental'])
 
 CurrentUser = Annotated[User, Depends(get_current_user)]
 Session = Annotated[AsyncSession, Depends(get_session)]

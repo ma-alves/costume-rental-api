@@ -16,7 +16,7 @@ from app.security import (
 
 OAuth2Password = Annotated[OAuth2PasswordRequestForm, Depends()]
 Session = Annotated[AsyncSession, Depends(get_session)]
-router = APIRouter(prefix='/auth', tags=['auth'])
+router = APIRouter(prefix='/api/v1/auth', tags=['auth'])
 
 
 @router.post('/token', response_model=Token)

@@ -2,14 +2,14 @@ from fastapi.testclient import TestClient
 
 
 def test_get_customers(client: TestClient, user, token):
-	response = client.get('/customers', headers={'Authorization': f'Bearer {token}'})
+	response = client.get('/api/v1/customers', headers={'Authorization': f'Bearer {token}'})
 	assert response.status_code == 200
 	assert response.json() == {'customers': []}
 
 
 def test_get_customer(client: TestClient, customer, user, token):
 	response = client.get(
-		f'/customers/{customer.id}',
+		f'/api/v1/customers/{customer.id}',
 		headers={'Authorization': f'Bearer {token}'},
 	)
 	assert response.status_code == 200
@@ -24,7 +24,7 @@ def test_get_customer(client: TestClient, customer, user, token):
 
 def test_get_customer_not_registered(client: TestClient, user, token):
 	response = client.get(
-		'/customers/404', headers={'Authorization': f'Bearer {token}'}
+		'/api/v1/customers/404', headers={'Authorization': f'Bearer {token}'}
 	)
 	assert response.status_code == 404
 	assert response.json() == {'detail': 'Customer not registered.'}
@@ -32,7 +32,7 @@ def test_get_customer_not_registered(client: TestClient, user, token):
 
 def test_create_customer(client: TestClient, user, token):
 	response = client.post(
-		'/customers',
+		'/api/v1/customers',
 		headers={'Authorization': f'Bearer {token}'},
 		json={
 			'cpf': '00900900911',
@@ -55,7 +55,7 @@ def test_create_customer(client: TestClient, user, token):
 
 def test_create_customer_already_registered(client: TestClient, user, token):
 	first_response = client.post(
-		'/customers',
+		'/api/v1/customers',
 		headers={'Authorization': f'Bearer {token}'},
 		json={
 			'cpf': '00900900911',
@@ -67,7 +67,7 @@ def test_create_customer_already_registered(client: TestClient, user, token):
 	)
 
 	second_response = client.post(
-		'/customers',
+		'/api/v1/customers',
 		headers={'Authorization': f'Bearer {token}'},
 		json={
 			'cpf': '00900900911',
@@ -83,7 +83,7 @@ def test_create_customer_already_registered(client: TestClient, user, token):
 
 def test_update_customer(client: TestClient, customer, user, token):
 	response = client.put(
-		f'/customers/{customer.id}',
+		f'/api/v1/customers/{customer.id}',
 		headers={'Authorization': f'Bearer {token}'},
 		json={
 			'cpf': '00900900911',
@@ -105,7 +105,7 @@ def test_update_customer(client: TestClient, customer, user, token):
 
 def test_update_customer_not_registered(client: TestClient, user, token):
 	response = client.put(
-		'/customers/404',
+		'/api/v1/customers/404',
 		headers={'Authorization': f'Bearer {token}'},
 		json={
 			'cpf': '00900900911',
@@ -121,7 +121,7 @@ def test_update_customer_not_registered(client: TestClient, user, token):
 
 def test_delete_customer(client: TestClient, customer, user, token):
 	response = client.delete(
-		f'/customers/{customer.id}',
+		f'/api/v1/customers/{customer.id}',
 		headers={'Authorization': f'Bearer {token}'},
 	)
 	assert response.status_code == 200
@@ -130,7 +130,7 @@ def test_delete_customer(client: TestClient, customer, user, token):
 
 def test_delete_customer_not_registered(client: TestClient, user, token):
 	response = client.delete(
-		'/customers/404',
+		'/api/v1/customers/404',
 		headers={'Authorization': f'Bearer {token}'},
 	)
 	assert response.status_code == 404

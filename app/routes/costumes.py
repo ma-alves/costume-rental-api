@@ -10,7 +10,7 @@ from app.models import Costume, CostumeAvailability, User
 from app.schemas import CostumeInput, CostumeList, CostumeOutput, Message
 from app.security import get_current_user
 
-router = APIRouter(prefix='/costumes', tags=['costumes'])
+router = APIRouter(prefix='/api/v1/costumes', tags=['costumes'])
 
 CurrentUser = Annotated[User, Depends(get_current_user)]
 Session = Annotated[AsyncSession, Depends(get_session)]

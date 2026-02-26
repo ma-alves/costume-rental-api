@@ -1,6 +1,6 @@
 [project]
 name = "costume-rental-api"
-version = "0.1.0"
+version = "1.0.0"
 description = "Costume Rental API by ma-alves"
 readme = "README.md"
 requires-python = ">=3.12"

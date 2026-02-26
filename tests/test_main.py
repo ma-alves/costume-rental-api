@@ -4,7 +4,7 @@ from fastapi.testclient import TestClient
 
 
 def test_root_returns_ok_and_localhost_doc(client: TestClient):
-	response = client.get('/')
+	response = client.get('/api/v1/')
 
 	assert response.status_code == HTTPStatus.OK
 	assert response.json() == {

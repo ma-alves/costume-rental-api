@@ -6,14 +6,14 @@ from app.models import User
 
 
 def test_read_users(client: TestClient):
-	response = client.get('/users')
+	response = client.get('/api/v1/users')
 	assert response.status_code == HTTPStatus.OK
 	assert response.json() == {'users': []}
 
 
 def test_create_user(client: TestClient):
 	response = client.post(
-		'/users',
+		'/api/v1/users',
 		json={
 			'name': 'matheus',
 			'email': 'matheus@email.com',
@@ -34,7 +34,7 @@ def test_create_user(client: TestClient):
 
 def test_create_user_already_exists(client: TestClient):
 	first_response = client.post(
-		'/users',
+		'/api/v1/users',
 		json={
 			'name': 'matheus',
 			'email': 'matheus@email.com',
@@ -44,7 +44,7 @@ def test_create_user_already_exists(client: TestClient):
 		},
 	)
 	second_response = client.post(
-		'/users',
+		'/api/v1/users',
 		json={
 			'name': 'matheus',
 			'email': 'matheus@email.com',
@@ -59,7 +59,7 @@ def test_create_user_already_exists(client: TestClient):
 
 
 def test_read_user(client: TestClient, user):
-	response = client.get(f'/users/{user.id}')
+	response = client.get(f'/api/v1/users/{user.id}')
 	assert response.status_code == HTTPStatus.OK
 	assert response.json() == {
 		'id': user.id,
@@ -71,14 +71,14 @@ def test_read_user(client: TestClient, user):
 
 
 def test_read_user_not_registered(client: TestClient):
-	response = client.get('/users/404')
+	response = client.get('/api/v1/users/404')
 	assert response.status_code == HTTPStatus.NOT_FOUND
 	assert response.json() == {'detail': 'User not registered.'}
 
 
 def test_update_user(client: TestClient, user: User, token: str):
 	response = client.put(
-		f'/users/{user.id}',
+		f'/api/v1/users/{user.id}',
 		headers={'Authorization': f'Bearer {token}'},
 		json={
 			'name': 'yasmim',
@@ -102,7 +102,7 @@ def test_update_user_no_permission(
 	client: TestClient, other_user: User, other_token: str
 ):
 	response = client.put(
-		'/users/400',
+		'/api/v1/users/400',
 		headers={'Authorization': f'Bearer {other_token}'},
 		json={
 			'name': 'yasmim',
@@ -118,7 +118,7 @@ def test_update_user_no_permission(
 
 def test_delete_user(client: TestClient, user: User, token: str):
 	response = client.delete(
-		f'/users/{user.id}',
+		f'/api/v1/users/{user.id}',
 		headers={'Authorization': f'Bearer {token}'},
 	)
 	assert response.status_code == HTTPStatus.OK
@@ -132,7 +132,7 @@ def test_delete_user_no_permission(
 	other_token: str,
 ):
 	response_delete = client.delete(
-		f'/users/{user.id}',
+		f'/api/v1/users/{user.id}',
 		headers={'Authorization': f'Bearer {other_token}'},
 	)
 	assert response_delete.status_code == HTTPStatus.BAD_REQUEST
