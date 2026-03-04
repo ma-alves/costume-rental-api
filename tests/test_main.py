@@ -10,3 +10,11 @@ def test_root_returns_ok_and_localhost_doc(client: TestClient):
 	assert response.json() == {
 		'message': 'Go to http://127.0.0.1:8000/docs to access the endpoints.'
 	}
+
+
+def test_rate_limiter_middleware(client: TestClient):
+	for req in range(50): # bate na 49
+		response = client.get('/api/v1/')
+		if response.status_code != HTTPStatus.OK:
+			break
+	assert response.status_code == HTTPStatus.TOO_MANY_REQUESTS
