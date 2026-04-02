@@ -28,7 +28,9 @@ Session = Annotated[AsyncSession, Depends(get_session)]
 
 
 def set_rental_attr(rental):
-	"""Set the models dictionaries in the json response. É uma gambiarra absurda desenvolvida através do desespero, em algum momento encontrarei uma solução melhor."""
+	# É uma gambiarra absurda desenvolvida através do desespero,
+	# em algum momento encontrarei uma solução melhor.
+	# Set the models dictionaries in the json response.
 	setattr(rental, 'costume', rental.costumes.__dict__)
 	setattr(rental, 'customer', rental.customers.__dict__)
 	setattr(rental, 'user', rental.users.__dict__)
@@ -69,7 +71,7 @@ async def read_rental(session: Session, current_user: CurrentUser, rental_id: in
 async def create_rental(
 	session: Session, current_user: CurrentUser, rental: RentalInput
 ):
-	# Costume code
+	# Costume query
 	db_costume = await session.scalar(
 		select(Costume).where(Costume.id == rental.costume_id)
 	)
@@ -81,14 +83,14 @@ async def create_rental(
 
 	db_costume.availability = CostumeAvailability.UNAVAILABLE
 
-	# Customer code
+	# Customer query
 	db_customer = await session.scalar(
 		select(Customer).where(Customer.id == rental.customer_id)
 	)
 	if not db_customer:
 		raise HTTPException(400, detail='Customer not registered.')
 
-	# Rental code
+	# Rental set
 	db_rental = Rental(
 		user_id=current_user.id,
 		customer_id=db_customer.id,
@@ -142,7 +144,7 @@ async def delete_rental(session: Session, current_user: CurrentUser, rental_id: 
 	db_costume = await session.scalar(
 		select(Costume).where(Costume.id == db_rental.costume_id)
 	)
-	db_costume.availability = CostumeAvailability.AVAILABLE
+	db_costume.availability = CostumeAvailability.AVAILABLE # type: ignore
 
 	await session.delete(db_rental)
 	await session.commit()

@@ -36,4 +36,4 @@ app.include_router(rental.router)
 
 @app.get('/api/v1', response_model=Message, status_code=200)
 def index():
-	return {'message': 'Go to http://127.0.0.1:8000/docs to access the endpoints.'}
+	return {'message': 'Go to http://127.0.0.1:8000/docs to access the API Swagger.'}

@@ -41,11 +41,9 @@ async def read_user(session: Session, user_id: int):
 	return user
 
 
+# Endpoint aberto para testes: implementar seed user
 @router.post('/', response_model=UserOutput, status_code=201)
 async def create_user(user: UserInput, session: Session):
-	"""
-	Open endpoint so anyone can test the API's permissions.
-	"""
 	db_user = await session.scalar(select(User).where(User.email == user.email))
 	if db_user:
 		raise HTTPException(400, detail='User already registered.')
