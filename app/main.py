@@ -22,6 +22,7 @@ app.add_middleware(
 )
 
 # biblioteca quebrada v0.2.0: middleware.py não instalado, corrigi manualmente
+# aguardando aprovação do PR que corrige issue #78
 app.add_middleware(
 	RateLimiterMiddleware,
 	limiter=Limiter(Rate(100, Duration.MINUTE * 1)),
