@@ -37,7 +37,7 @@ def set_rental_attr(rental):
 
 	return rental
 
-
+# admin
 @router.get('/', response_model=RentalList)
 async def read_rental_list(
 	session: Session,
@@ -54,7 +54,7 @@ async def read_rental_list(
 
 	return {'rental_list': rental_list}
 
-
+# admin
 @router.get('/{rental_id}', response_model=RentalSchema)
 async def read_rental(session: Session, current_user: CurrentUser, rental_id: int):
 	db_rental = await session.scalar(select(Rental).where(Rental.id == rental_id))
@@ -105,7 +105,7 @@ async def create_rental(
 
 	return db_rental
 
-
+# refazer: PUT
 @router.patch('/{rental_id}', response_model=RentalSchema)
 async def patch_rental(
 	session: Session,

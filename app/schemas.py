@@ -61,25 +61,11 @@ class CostumeList(BaseModel):
 	costumes: List[CostumeOutput]
 
 
-# Customers
-class CustomerSchema(BaseModel):
-	cpf: str
-	name: str
-	email: str
-	phone_number: str
-	address: str
-
-
-class CustomerList(BaseModel):
-	customers: List[CustomerSchema]
-
-
 # Rental
 class RentalSchema(BaseModel):
 	rental_date: datetime
 	return_date: datetime
 	costume: CostumeOutput
-	customer: CustomerSchema
 	user: UserOutput
 
 

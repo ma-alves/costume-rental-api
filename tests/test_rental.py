@@ -1,6 +1,6 @@
 from fastapi.testclient import TestClient
 
-from app.routes.rental import set_rental_attr
+from app.routes.rental_route import set_rental_attr
 from tests.factories import RentalFactory
 
 

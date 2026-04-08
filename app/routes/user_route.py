@@ -21,7 +21,7 @@ router = APIRouter(prefix='/api/v1/users', tags=['users'])
 CurrentUser = Annotated[User, Depends(get_current_user)]
 Session = Annotated[AsyncSession, Depends(get_session)]
 
-
+# admin
 @router.get('/', response_model=UserList)
 async def read_users(session: Session, skip: int = 0, limit: int = 100):
 	users_scalar = await session.scalars(select(User).offset(skip).limit(limit))
@@ -30,7 +30,7 @@ async def read_users(session: Session, skip: int = 0, limit: int = 100):
 
 	return {'users': users}
 
-
+# admin
 @router.get('/{user_id}', response_model=UserOutput, status_code=200)
 async def read_user(session: Session, user_id: int):
 	user = await session.scalar(select(User).where(User.id == user_id))
@@ -41,7 +41,7 @@ async def read_user(session: Session, user_id: int):
 	return user
 
 
-# Endpoint aberto para testes: implementar seed user
+# Endpoint aberto para testes: implementar seed user admin
 @router.post('/', response_model=UserOutput, status_code=201)
 async def create_user(user: UserInput, session: Session):
 	db_user = await session.scalar(select(User).where(User.email == user.email))
@@ -98,7 +98,7 @@ async def update_user(
 			detail='Username or Email already exists.',
 		)
 
-
+# alterar para soft delete
 @router.delete('/{user_id}', response_model=Message)
 async def delete_user(
 	current_user: CurrentUser,

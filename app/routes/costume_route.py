@@ -50,7 +50,7 @@ async def get_costume(session: Session, costume_id: int):
 	db_costume = await query_costume_by_id(session, costume_id)
 	return db_costume
 
-
+# admin
 @router.post('/', response_model=CostumeOutput, status_code=HTTPStatus.CREATED)
 async def create_costume(
 	session: Session,
@@ -77,7 +77,7 @@ async def create_costume(
 
 	return db_costume
 
-
+# admin
 @router.put('/{costume_id}', response_model=CostumeOutput)
 async def update_costume(
 	session: Session,
@@ -97,7 +97,7 @@ async def update_costume(
 
 	return db_costume
 
-
+# admin
 @router.delete('/{costume_id}', response_model=Message)
 async def delete_costume(
 	current_user: CurrentUser,

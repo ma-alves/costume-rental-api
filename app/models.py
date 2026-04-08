@@ -20,6 +20,11 @@ class CostumeAvailability(str, Enum):
 	UNRETURNED = 'unreturned'
 
 
+class Role(str, Enum):
+	ADMIN = 'admin'
+	CUSTOMER = 'customer'
+
+
 @mapped_as_dataclass(table_registry)
 class Costume:
 	__tablename__ = 'costumes'
@@ -34,31 +39,18 @@ class Costume:
 
 
 @mapped_as_dataclass(table_registry)
-class Customer:
-	__tablename__ = 'customers'
-
-	id: Mapped[int] = mapped_column(primary_key=True, init=False)
-	cpf: Mapped[str] = mapped_column(String(11))
-	name: Mapped[str]
-	email: Mapped[str]
-	phone_number: Mapped[str] = mapped_column(String(11))
-	address: Mapped[str]
-
-	rental: Mapped[List['Rental']] = relationship(
-		back_populates='customers', init=False
-	)
-
-
-@mapped_as_dataclass(table_registry)
 class User:
 	__tablename__ = 'users'
 
 	id: Mapped[int] = mapped_column(primary_key=True, init=False)
 	name: Mapped[str]
+	cpf: Mapped[str] = mapped_column(String(11))
 	email: Mapped[str]
-	password: Mapped[str]
-	phone_number: Mapped[Optional[str]] = mapped_column(String(11))
-	is_admin: Mapped[bool]
+	passwordHash: Mapped[str]
+	address: Mapped[str]
+	phone: Mapped[Optional[str]] = mapped_column(String(11))
+	role: Mapped[Role]
+	created_at: Mapped[datetime] = mapped_column(default=datetime.now())
 
 	rental: Mapped[List['Rental']] = relationship(back_populates='users', init=False)
 
@@ -69,11 +61,9 @@ class Rental:
 
 	id: Mapped[int] = mapped_column(primary_key=True, init=False)
 	user_id: Mapped[int] = mapped_column(ForeignKey('users.id'))
-	customer_id: Mapped[int] = mapped_column(ForeignKey('customers.id'))
 	costume_id: Mapped[int] = mapped_column(ForeignKey('costumes.id'))
 
 	users: Mapped['User'] = relationship(back_populates='rental', init=False)
-	customers: Mapped['Customer'] = relationship(back_populates='rental', init=False)
 	costumes: Mapped['Costume'] = relationship(back_populates='rental', init=False)
 
 	rental_date: Mapped[datetime] = mapped_column(default=datetime.now())
