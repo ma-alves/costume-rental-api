@@ -24,7 +24,10 @@ class UserService:
 		return user
 
 	async def get_by_email(self, session: AsyncSession, email: str) -> Optional[User]:
-		return await session.scalar(select(User).where(User.email == email))
+		user = await session.scalar(select(User).where(User.email == email))
+		if not user:
+			raise HTTPException(404, detail='User not registered.')
+		return user
 
 	async def create(self, session: AsyncSession, user_data: UserInput) -> User:
 		existing = await self.get_by_email(session, user_data.email)
@@ -52,7 +55,7 @@ class UserService:
 	async def update(
 		self, session: AsyncSession, user_id: int, user_data: UserInput, current_user: User
 	) -> User:
-		if current_user.role != Role.ADMIN and current_user.id != user_id:
+		if current_user.role != Role.ADMIN or current_user.id != user_id:
 			raise HTTPException(status_code=403, detail='Not enough permissions')
 
 		db_user = await self.get_by_id(session, user_id)
@@ -62,8 +65,7 @@ class UserService:
 			db_user.passwordHash = get_password_hash(user_data.password)
 			db_user.email = user_data.email
 			db_user.phone = user_data.phone_number
-			if current_user.role == Role.ADMIN:
-				db_user.role = Role.ADMIN if user_data.role else Role.CUSTOMER
+			db_user.role = Role.CUSTOMER if not current_user.role == Role.ADMIN else user_data.role
 
 			await session.commit()
 			await session.refresh(db_user)
@@ -76,7 +78,7 @@ class UserService:
 			)
 
 	async def delete(self, session: AsyncSession, user_id: int, current_user: User) -> None:
-		if current_user.role != Role.ADMIN and current_user.id != user_id:
+		if current_user.role != Role.ADMIN or current_user.id != user_id:
 			raise HTTPException(status_code=403, detail='Not enough permissions')
 
 		db_user = await self.get_by_id(session, user_id)
