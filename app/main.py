@@ -1,17 +1,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi_limiter.middleware import RateLimiterMiddleware
-from pyrate_limiter import Duration, Limiter, Rate
 
 from .routes import auth_route, costume_route, rental_route, user_route
 from .schemas import Message
 
 app = FastAPI()
 
-origins = [
-	'http://localhost',
-	'http://localhost:8080',
-]
+origins = ['*']
 
 app.add_middleware(
 	CORSMiddleware,
@@ -19,13 +14,6 @@ app.add_middleware(
 	allow_credentials=True,
 	allow_methods=['*'],
 	allow_headers=['*'],
-)
-
-# biblioteca quebrada v0.2.0: middleware.py não instalado
-# aguardando aprovação do PR que corrige issue #78
-app.add_middleware(
-	RateLimiterMiddleware,
-	limiter=Limiter(Rate(100, Duration.MINUTE * 1)),
 )
 
 app.include_router(auth_route.router)
