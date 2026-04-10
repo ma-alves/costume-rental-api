@@ -3,22 +3,22 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi_limiter.middleware import RateLimiterMiddleware
 from pyrate_limiter import Duration, Limiter, Rate
 
-from .routes import auth_route, costume_route, customers, rental_route, user_route
+from .routes import auth_route, costume_route, rental_route, user_route
 from .schemas import Message
 
 app = FastAPI()
 
 origins = [
-    "http://localhost",
-    "http://localhost:8080",
+	'http://localhost',
+	'http://localhost:8080',
 ]
 
 app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+	CORSMiddleware,
+	allow_origins=origins,
+	allow_credentials=True,
+	allow_methods=['*'],
+	allow_headers=['*'],
 )
 
 # biblioteca quebrada v0.2.0: middleware.py não instalado
@@ -31,7 +31,6 @@ app.add_middleware(
 app.include_router(auth_route.router)
 app.include_router(user_route.router)
 app.include_router(costume_route.router)
-app.include_router(customers.router)
 app.include_router(rental_route.router)
 
 

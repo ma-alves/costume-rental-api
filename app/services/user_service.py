@@ -1,0 +1,85 @@
+from typing import Optional
+
+from fastapi import HTTPException
+from psycopg import IntegrityError
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.models import Role, User
+from app.schemas import UserInput
+from app.security import get_password_hash
+
+
+class UserService:
+	async def get_all(self, session: AsyncSession, skip: int = 0, limit: int = 100):
+		users_scalar = await session.scalars(select(User).offset(skip).limit(limit))
+		users = users_scalar.all()
+		
+		return users
+
+	async def get_by_id(self, session: AsyncSession, user_id: int) -> User:
+		user = await session.scalar(select(User).where(User.id == user_id))
+		if not user:
+			raise HTTPException(404, detail='User not registered.')
+		return user
+
+	async def get_by_email(self, session: AsyncSession, email: str) -> Optional[User]:
+		return await session.scalar(select(User).where(User.email == email))
+
+	async def create(self, session: AsyncSession, user_data: UserInput) -> User:
+		existing = await self.get_by_email(session, user_data.email)
+		if existing:
+			raise HTTPException(400, detail='User already registered.')
+
+		hashed_password = get_password_hash(user_data.password)
+		role = Role.CUSTOMER
+
+		db_user = User(
+			name=user_data.name,
+			email=user_data.email,
+			passwordHash=hashed_password,
+			phone=user_data.phone_number,
+			role=role,
+			cpf='',
+			address='',
+		)
+
+		session.add(db_user)
+		await session.commit()
+		await session.refresh(db_user)
+		return db_user
+
+	async def update(
+		self, session: AsyncSession, user_id: int, user_data: UserInput, current_user: User
+	) -> User:
+		if current_user.role != Role.ADMIN and current_user.id != user_id:
+			raise HTTPException(status_code=403, detail='Not enough permissions')
+
+		db_user = await self.get_by_id(session, user_id)
+
+		try:
+			db_user.name = user_data.name
+			db_user.passwordHash = get_password_hash(user_data.password)
+			db_user.email = user_data.email
+			db_user.phone = user_data.phone_number
+			if current_user.role == Role.ADMIN:
+				db_user.role = Role.ADMIN if user_data.role else Role.CUSTOMER
+
+			await session.commit()
+			await session.refresh(db_user)
+			return db_user
+		except IntegrityError:
+			await session.rollback()
+			raise HTTPException(
+				status_code=409,
+				detail='Username or Email already exists.',
+			)
+
+	async def delete(self, session: AsyncSession, user_id: int, current_user: User) -> None:
+		if current_user.role != Role.ADMIN and current_user.id != user_id:
+			raise HTTPException(status_code=403, detail='Not enough permissions')
+
+		db_user = await self.get_by_id(session, user_id)
+
+		await session.delete(db_user)
+		await session.commit()
