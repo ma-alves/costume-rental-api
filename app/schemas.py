@@ -3,7 +3,7 @@ from typing import List
 
 from pydantic import BaseModel, EmailStr
 
-from .models import CostumeAvailability
+from .models import CostumeAvailability, Role
 
 
 class Message(BaseModel):
@@ -26,7 +26,9 @@ class UserInput(BaseModel):
 	password: str
 	email: EmailStr
 	phone_number: str
-	is_admin: bool = False
+	cpf: str = ''
+	address: str = ''
+	role: Role = Role.CUSTOMER
 
 
 class UserOutput(BaseModel):
@@ -34,7 +36,10 @@ class UserOutput(BaseModel):
 	name: str
 	email: EmailStr
 	phone_number: str
-	is_admin: bool
+	role: Role = Role.CUSTOMER
+
+	class Config:
+		from_attributes = True
 
 
 class UserList(BaseModel):
@@ -61,25 +66,11 @@ class CostumeList(BaseModel):
 	costumes: List[CostumeOutput]
 
 
-# Customers
-class CustomerSchema(BaseModel):
-	cpf: str
-	name: str
-	email: str
-	phone_number: str
-	address: str
-
-
-class CustomerList(BaseModel):
-	customers: List[CustomerSchema]
-
-
 # Rental
 class RentalSchema(BaseModel):
 	rental_date: datetime
 	return_date: datetime
 	costume: CostumeOutput
-	customer: CustomerSchema
 	user: UserOutput
 
 

@@ -1,13 +1,13 @@
 import pytest
-from factories import CostumeFactory, CustomerFactory, RentalFactory, UserFactory
+from factories import CostumeFactory, RentalFactory, UserFactory
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import (
 	Costume,
 	CostumeAvailability,
-	Customer,
 	Rental,
+	Role,
 	User,
 )
 
@@ -44,35 +44,29 @@ async def test_create_user(test_session: AsyncSession):
 
 	assert user.name == new_user.name
 	assert user.email == new_user.email
-	assert user.password == new_user.password
-	assert user.phone_number == new_user.phone_number
+	assert user.passwordHash == new_user.passwordHash
+	assert user.phone == new_user.phone
 
 
 @pytest.mark.asyncio
 async def test_create_customer(test_session: AsyncSession):
-	new_customer = CustomerFactory()
+	new_customer = UserFactory(role=Role.CUSTOMER)
 
 	test_session.add(new_customer)
 	await test_session.commit()
 
-	customer = await test_session.scalar(
-		select(Customer).where(Customer.id == new_customer.id)
-	)
+	customer = await test_session.scalar(select(User).where(User.id == new_customer.id))
 
 	assert customer.cpf == new_customer.cpf
 	assert customer.name == new_customer.name
 	assert customer.email == new_customer.email
-	assert customer.phone_number == new_customer.phone_number
+	assert customer.phone == new_customer.phone
 	assert customer.address == new_customer.address
+	assert customer.role == Role.CUSTOMER
 
 
 @pytest.mark.asyncio
 async def test_create_rental(test_session: AsyncSession):
-	# new_costume = CostumeFactory()
-	# new_customer = CustomerFactory()
-	# new_user = UserFactory()
-
-	# test_session.add_all([new_costume, new_customer, new_user])
 	new_rental = RentalFactory()
 	test_session.add(new_rental)
 	await test_session.commit()
@@ -82,5 +76,4 @@ async def test_create_rental(test_session: AsyncSession):
 	assert rental.rental_date == new_rental.rental_date
 	assert rental.return_date == new_rental.return_date
 	assert rental.costume_id == new_rental.costume_id
-	assert rental.customer_id == new_rental.customer_id
 	assert rental.user_id == new_rental.user_id

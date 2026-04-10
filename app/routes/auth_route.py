@@ -5,8 +5,9 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.security import RoleChecker
 from app.database import get_session
-from app.models import User
+from app.models import User, Role
 from app.schemas import Token
 from app.security import (
 	create_access_token,
@@ -14,9 +15,11 @@ from app.security import (
 	verify_password_hash,
 )
 
-OAuth2Password = Annotated[OAuth2PasswordRequestForm, Depends()]
-Session = Annotated[AsyncSession, Depends(get_session)]
 router = APIRouter(prefix='/api/v1/auth', tags=['auth'])
+
+Session = Annotated[AsyncSession, Depends(get_session)]
+OAuth2Password = Annotated[OAuth2PasswordRequestForm, Depends()]
+role_checker = Depends(RoleChecker([Role.ADMIN]))
 
 
 @router.post('/token', response_model=Token)
@@ -26,7 +29,7 @@ async def login_for_access_token(form_data: OAuth2Password, session: Session):
 	if not user:
 		raise HTTPException(404, detail='User not registered.')
 
-	if not verify_password_hash(form_data.password, user.password):
+	if not verify_password_hash(form_data.password, user.passwordHash):
 		raise HTTPException(400, detail='Incorrect email or password.')
 
 	access_token = create_access_token(data={'sub': user.email})
@@ -34,7 +37,7 @@ async def login_for_access_token(form_data: OAuth2Password, session: Session):
 	return {'access_token': access_token, 'token_type': 'bearer'}
 
 
-@router.post('/refresh_token', response_model=Token)
+@router.post('/refresh_token', response_model=Token, dependencies=role_checker)
 def refresh_access_token(user: User = Depends(get_current_user)):
 	new_access_token = create_access_token(data={'sub': user.email})
 

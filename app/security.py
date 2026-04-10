@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from typing import List, Any
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
@@ -16,7 +17,11 @@ from .settings import Settings
 settings = Settings()
 pwd_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl='/api/v1/auth/token')
-
+credentials_exception = HTTPException(
+	status_code=status.HTTP_401_UNAUTHORIZED,
+	detail='Could not validate credentials',
+	headers={'WWW-Authenticate': 'Bearer'},
+)
 
 def get_password_hash(password: str):
 	return pwd_context.hash(password)
@@ -43,11 +48,6 @@ async def get_current_user(
 	session: AsyncSession = Depends(get_session),
 	token: str = Depends(oauth2_scheme),
 ):
-	credentials_exception = HTTPException(
-		status_code=status.HTTP_401_UNAUTHORIZED,
-		detail='Could not validate credentials',
-		headers={'WWW-Authenticate': 'Bearer'},
-	)
 
 	try:
 		payload = decode(
@@ -68,3 +68,14 @@ async def get_current_user(
 		raise credentials_exception
 
 	return user
+
+
+class RoleChecker:
+    def __init__(self, allowed_roles: List[str]) -> None:
+        self.allowed_roles = allowed_roles
+
+    def __call__(self, current_user: User = Depends(get_current_user)) -> Any:
+        if current_user.role in self.allowed_roles:
+            return True
+
+        raise credentials_exception

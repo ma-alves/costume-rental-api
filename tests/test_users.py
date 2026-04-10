@@ -5,8 +5,8 @@ from fastapi.testclient import TestClient
 from app.models import User
 
 
-def test_read_users(client: TestClient):
-	response = client.get('/api/v1/users')
+def test_read_users(client: TestClient, token: str):
+	response = client.get('/api/v1/users', headers={'Authorization': f'Bearer {token}'})
 	assert response.status_code == HTTPStatus.OK
 	assert response.json() == {'users': []}
 
@@ -58,20 +58,23 @@ def test_create_user_already_exists(client: TestClient):
 	assert second_response.json() == {'detail': 'User already registered.'}
 
 
-def test_read_user(client: TestClient, user):
-	response = client.get(f'/api/v1/users/{user.id}')
+def test_read_user(client: TestClient, user, token):
+	response = client.get(
+		f'/api/v1/users/{user.id}', headers={'Authorization': f'Bearer {token}'}
+	)
 	assert response.status_code == HTTPStatus.OK
-	assert response.json() == {
-		'id': user.id,
-		'name': f'{user.name}',
-		'email': f'{user.email}',
-		'phone_number': f'{user.phone_number}',
-		'is_admin': True,
-	}
+	response_json = response.json()
+	assert response_json['id'] == user.id
+	assert response_json['name'] == user.name
+	assert response_json['email'] == user.email
+	assert response_json['phone_number'] == user.phone
+	assert response_json['is_admin'] == user.is_admin
 
 
-def test_read_user_not_registered(client: TestClient):
-	response = client.get('/api/v1/users/404')
+def test_read_user_not_registered(client: TestClient, token: str):
+	response = client.get(
+		'/api/v1/users/404', headers={'Authorization': f'Bearer {token}'}
+	)
 	assert response.status_code == HTTPStatus.NOT_FOUND
 	assert response.json() == {'detail': 'User not registered.'}
 

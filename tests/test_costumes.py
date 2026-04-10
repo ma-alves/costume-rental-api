@@ -22,7 +22,7 @@ def test_get_costume(client: TestClient, costume):
 
 
 def test_get_costume_not_registered(client: TestClient):
-	response = client.get(f'/api/v1/costumes/404')
+	response = client.get('/api/v1/costumes/404')
 	assert response.status_code == 404
 	assert response.json() == {'detail': 'Costume not registered.'}
 
@@ -97,7 +97,7 @@ def test_update_costume(client: TestClient, costume, user, token):
 
 def test_update_costume_not_registered(client: TestClient, user, token):
 	response = client.put(
-		f'/api/v1/costumes/404',
+		'/api/v1/costumes/404',
 		headers={'Authorization': f'Bearer {token}'},
 		json={
 			'name': 'Updated name',
@@ -121,7 +121,7 @@ def test_delete_costume(client: TestClient, costume, user, token):
 
 def test_delete_costume_not_registered(client: TestClient, user, token):
 	response = client.delete(
-		f'/api/v1/costumes/404',
+		'/api/v1/costumes/404',
 		headers={'Authorization': f'Bearer {token}'},
 	)
 	assert response.status_code == 404

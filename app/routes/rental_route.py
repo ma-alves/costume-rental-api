@@ -8,8 +8,8 @@ from app.database import get_session
 from app.models import (
 	Costume,
 	CostumeAvailability,
-	Customer,
 	Rental,
+	Role,
 	User,
 )
 from app.schemas import (
@@ -19,26 +19,24 @@ from app.schemas import (
 	RentalPatch,
 	RentalSchema,
 )
-from app.security import get_current_user
+from app.security import get_current_user, RoleChecker
 
 router = APIRouter(prefix='/api/v1/rental', tags=['rental'])
 
 CurrentUser = Annotated[User, Depends(get_current_user)]
 Session = Annotated[AsyncSession, Depends(get_session)]
-
+role_checker = Depends(RoleChecker([Role.ADMIN]))
 
 def set_rental_attr(rental):
-	# É uma gambiarra absurda desenvolvida através do desespero,
-	# em algum momento encontrarei uma solução melhor.
 	# Set the models dictionaries in the json response.
 	setattr(rental, 'costume', rental.costumes.__dict__)
-	setattr(rental, 'customer', rental.customers.__dict__)
 	setattr(rental, 'user', rental.users.__dict__)
 
 	return rental
 
 
-@router.get('/', response_model=RentalList)
+# admin
+@router.get('/', response_model=RentalList, dependencies=role_checker)
 async def read_rental_list(
 	session: Session,
 	current_user: CurrentUser,
@@ -55,7 +53,8 @@ async def read_rental_list(
 	return {'rental_list': rental_list}
 
 
-@router.get('/{rental_id}', response_model=RentalSchema)
+# admin
+@router.get('/{rental_id}', response_model=RentalSchema, dependencies=role_checker)
 async def read_rental(session: Session, current_user: CurrentUser, rental_id: int):
 	db_rental = await session.scalar(select(Rental).where(Rental.id == rental_id))
 
@@ -83,9 +82,9 @@ async def create_rental(
 
 	db_costume.availability = CostumeAvailability.UNAVAILABLE
 
-	# Customer query
+	# Customer query (User with CUSTOMER role)
 	db_customer = await session.scalar(
-		select(Customer).where(Customer.id == rental.customer_id)
+		select(User).where(User.id == rental.customer_id, User.role == Role.CUSTOMER)
 	)
 	if not db_customer:
 		raise HTTPException(400, detail='Customer not registered.')
@@ -93,7 +92,6 @@ async def create_rental(
 	# Rental set
 	db_rental = Rental(
 		user_id=current_user.id,
-		customer_id=db_customer.id,
 		costume_id=rental.costume_id,
 	)
 
@@ -106,6 +104,7 @@ async def create_rental(
 	return db_rental
 
 
+# refazer: PUT
 @router.patch('/{rental_id}', response_model=RentalSchema)
 async def patch_rental(
 	session: Session,
@@ -144,7 +143,7 @@ async def delete_rental(session: Session, current_user: CurrentUser, rental_id: 
 	db_costume = await session.scalar(
 		select(Costume).where(Costume.id == db_rental.costume_id)
 	)
-	db_costume.availability = CostumeAvailability.AVAILABLE # type: ignore
+	db_costume.availability = CostumeAvailability.AVAILABLE  # type: ignore
 
 	await session.delete(db_rental)
 	await session.commit()

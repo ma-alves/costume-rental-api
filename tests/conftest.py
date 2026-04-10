@@ -2,7 +2,6 @@ import pytest
 import pytest_asyncio
 from factories import (
 	CostumeFactory,
-	CustomerFactory,
 	UserFactory,
 )
 from fastapi.testclient import TestClient
@@ -18,15 +17,15 @@ from app.main import app
 from app.models import (
 	Costume,
 	CostumeAvailability,
-	Customer,
 	Rental,
+	Role,
 	User,
 	table_registry,
 )
 from app.security import get_password_hash
 
 
-# teste local em SQLite assíncrono pois o processo 
+# teste local em SQLite assíncrono pois o processo
 # é teimoso (refazer cenário e explicar)
 @pytest_asyncio.fixture
 async def test_session():
@@ -63,7 +62,7 @@ def client(test_session: Session):
 @pytest_asyncio.fixture
 async def user(test_session: Session):
 	password = 'test1234'
-	test_user = UserFactory(password=get_password_hash(password))
+	test_user = UserFactory(passwordHash=get_password_hash(password), role=Role.ADMIN)
 
 	test_session.add(test_user)
 	await test_session.commit()
@@ -77,7 +76,9 @@ async def user(test_session: Session):
 @pytest_asyncio.fixture
 async def other_user(test_session: Session):
 	password = 'test1234'
-	test_user = UserFactory(password=get_password_hash(password), is_admin=False)
+	test_user = UserFactory(
+		passwordHash=get_password_hash(password), role=Role.CUSTOMER
+	)
 
 	test_session.add(test_user)
 	await test_session.commit()
@@ -144,7 +145,7 @@ async def unavailable_costume(test_session: Session):
 
 @pytest_asyncio.fixture
 async def customer(test_session: Session):
-	test_customer = CustomerFactory()
+	test_customer = UserFactory(role=Role.CUSTOMER)
 
 	test_session.add(test_customer)
 	await test_session.commit()
@@ -165,31 +166,34 @@ async def rental(test_session: Session):
 	await test_session.commit()
 	await test_session.refresh(costume)
 
-	customer = Customer(
+	customer = User(
 		cpf='12345678901',
 		name='Test Customer',
-		email='test@example.com',
-		phone_number='12345678901',
+		email='customer@example.com',
+		passwordHash=get_password_hash('test1234'),
+		phone='12345678901',
 		address='123 Test St',
+		role=Role.CUSTOMER,
 	)
 	test_session.add(customer)
 	await test_session.commit()
 	await test_session.refresh(customer)
 
-	user = User(
-		email='test@example.com',
-		password=get_password_hash('test1234'),
-		name='Test User',
-		phone_number='12345678901',
-		is_admin=True,
+	admin_user = User(
+		email='admin@example.com',
+		passwordHash=get_password_hash('test1234'),
+		name='Test Admin',
+		phone='12345678901',
+		role=Role.ADMIN,
+		cpf='11122233344',
+		address='456 Admin St',
 	)
-	test_session.add(user)
+	test_session.add(admin_user)
 	await test_session.commit()
-	await test_session.refresh(user)
+	await test_session.refresh(admin_user)
 
 	test_rental = Rental(
-		user_id=user.id,
-		customer_id=customer.id,
+		user_id=admin_user.id,
 		costume_id=costume.id,
 	)
 
@@ -197,14 +201,11 @@ async def rental(test_session: Session):
 	await test_session.commit()
 	await test_session.refresh(test_rental)
 
-	# eager loading
-	# https://docs.sqlalchemy.org/en/14/orm/loading_relationships.html#sqlalchemy.orm.joinedload
 	rental_query = (
 		select(Rental)
 		.where(Rental.id == test_rental.id)
 		.options(
 			joinedload(Rental.costumes),
-			joinedload(Rental.customers),
 			joinedload(Rental.users),
 		)
 	)

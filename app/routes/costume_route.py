@@ -6,14 +6,15 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_session
-from app.models import Costume, CostumeAvailability, User
+from app.models import Costume, CostumeAvailability, User, Role
 from app.schemas import CostumeInput, CostumeList, CostumeOutput, Message
-from app.security import get_current_user
+from app.security import get_current_user, RoleChecker
 
 router = APIRouter(prefix='/api/v1/costumes', tags=['costumes'])
 
 CurrentUser = Annotated[User, Depends(get_current_user)]
 Session = Annotated[AsyncSession, Depends(get_session)]
+role_checker = Depends(RoleChecker([Role.ADMIN]))
 
 
 async def query_costume_by_id(session: Session, costume_id):
@@ -37,7 +38,8 @@ async def get_costumes(
 	query = select(Costume)
 
 	if availability:
-		query = await query.filter(Costume.availability == availability)
+		query = query.filter(Costume.availability == availability)
+		# query = await query.filter(Costume.availability == availability)
 
 	costumes_scalar = await session.scalars(query.offset(skip).limit(limit))
 	costumes = costumes_scalar.all()
@@ -51,7 +53,8 @@ async def get_costume(session: Session, costume_id: int):
 	return db_costume
 
 
-@router.post('/', response_model=CostumeOutput, status_code=HTTPStatus.CREATED)
+# admin
+@router.post('/', response_model=CostumeOutput, status_code=HTTPStatus.CREATED, dependencies=role_checker)
 async def create_costume(
 	session: Session,
 	current_user: CurrentUser,
@@ -78,7 +81,8 @@ async def create_costume(
 	return db_costume
 
 
-@router.put('/{costume_id}', response_model=CostumeOutput)
+# admin
+@router.put('/{costume_id}', response_model=CostumeOutput, dependencies=role_checker)
 async def update_costume(
 	session: Session,
 	current_user: CurrentUser,
@@ -98,7 +102,8 @@ async def update_costume(
 	return db_costume
 
 
-@router.delete('/{costume_id}', response_model=Message)
+# admin
+@router.delete('/{costume_id}', response_model=Message, dependencies=role_checker)
 async def delete_costume(
 	current_user: CurrentUser,
 	session: Session,
