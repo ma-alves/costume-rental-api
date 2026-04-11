@@ -28,7 +28,9 @@ async def read_users(
 	return {'users': users}
 
 
-@router.get('/{user_id}', response_model=UserOutput, status_code=200, dependencies=role_checker)
+@router.get(
+	'/{user_id}', response_model=UserOutput, status_code=200, dependencies=role_checker
+)
 async def read_user(session: Session, current_user: CurrentUser, user_id: int):
 	user = await user_service.get_by_id(session, user_id)
 	return user

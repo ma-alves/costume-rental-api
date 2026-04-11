@@ -1,31 +1,21 @@
 from http import HTTPStatus
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import select
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_session
-from app.models import Costume, CostumeAvailability, User, Role
+from app.models import CostumeAvailability, User, Role
 from app.schemas import CostumeInput, CostumeList, CostumeOutput, Message
 from app.security import get_current_user, RoleChecker
+from app.services.costume_service import CostumeService
 
 router = APIRouter(prefix='/api/v1/costumes', tags=['costumes'])
 
-CurrentUser = Annotated[User, Depends(get_current_user)]
 Session = Annotated[AsyncSession, Depends(get_session)]
+CurrentUser = Annotated[User, Depends(get_current_user)]
 role_checker = Depends(RoleChecker([Role.ADMIN]))
-
-
-async def query_costume_by_id(session: Session, costume_id):
-	query_db_costume = await session.scalar(
-		select(Costume).where(Costume.id == costume_id)
-	)
-
-	if not query_db_costume:
-		raise HTTPException(HTTPStatus.NOT_FOUND, detail='Costume not registered.')
-
-	return query_db_costume
+costume_service = CostumeService()
 
 
 @router.get('/', response_model=CostumeList)
@@ -35,53 +25,31 @@ async def get_costumes(
 	skip: int = Query(None),
 	limit: int = Query(None),
 ):
-	query = select(Costume)
-
-	if availability:
-		query = query.filter(Costume.availability == availability)
-		# query = await query.filter(Costume.availability == availability)
-
-	costumes_scalar = await session.scalars(query.offset(skip).limit(limit))
-	costumes = costumes_scalar.all()
-
+	costumes = await costume_service.get_all(session, skip, limit, availability)
 	return {'costumes': costumes}
 
 
 @router.get('/{costume_id}', response_model=CostumeOutput)
 async def get_costume(session: Session, costume_id: int):
-	db_costume = await query_costume_by_id(session, costume_id)
-	return db_costume
+	costume = await costume_service.get_by_id(session, costume_id)
+	return costume
 
 
-# admin
-@router.post('/', response_model=CostumeOutput, status_code=HTTPStatus.CREATED, dependencies=role_checker)
+@router.post(
+	'/',
+	response_model=CostumeOutput,
+	status_code=HTTPStatus.CREATED,
+	dependencies=role_checker,
+)
 async def create_costume(
 	session: Session,
 	current_user: CurrentUser,
 	costume: CostumeInput,
 ):
-	db_costume = await session.scalar(
-		select(Costume).where(Costume.name == costume.name)
-	)
-
-	if db_costume:
-		raise HTTPException(HTTPStatus.CONFLICT, detail='Costume already registered.')
-
-	db_costume = Costume(
-		name=costume.name,
-		description=costume.description,
-		fee=costume.fee,
-		availability=costume.availability,
-	)
-
-	session.add(db_costume)
-	await session.commit()
-	await session.refresh(db_costume)
-
+	db_costume = await costume_service.create(session, costume)
 	return db_costume
 
 
-# admin
 @router.put('/{costume_id}', response_model=CostumeOutput, dependencies=role_checker)
 async def update_costume(
 	session: Session,
@@ -89,29 +57,15 @@ async def update_costume(
 	costume: CostumeInput,
 	costume_id: int,
 ):
-	db_costume = await query_costume_by_id(session, costume_id)
-
-	db_costume.name = costume.name
-	db_costume.description = costume.description
-	db_costume.fee = costume.fee
-	db_costume.availability = costume.availability
-
-	await session.commit()
-	await session.refresh(db_costume)
-
+	db_costume = await costume_service.update(session, costume_id, costume)
 	return db_costume
 
 
-# admin
 @router.delete('/{costume_id}', response_model=Message, dependencies=role_checker)
 async def delete_costume(
 	current_user: CurrentUser,
 	session: Session,
 	costume_id: int,
 ):
-	db_costume = await query_costume_by_id(session, costume_id)
-
-	await session.delete(db_costume)
-	await session.commit()
-
+	await costume_service.delete(session, costume_id)
 	return {'message': 'Costume deleted.'}

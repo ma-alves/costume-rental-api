@@ -1,41 +1,28 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_session
-from app.models import (
-	Costume,
-	CostumeAvailability,
-	Rental,
-	Role,
-	User,
-)
+from app.models import Role, User
 from app.schemas import (
 	Message,
 	RentalInput,
 	RentalList,
-	RentalPatch,
+	# RentalPatch,
 	RentalSchema,
 )
 from app.security import get_current_user, RoleChecker
+from app.services.rental_service import RentalService
 
 router = APIRouter(prefix='/api/v1/rental', tags=['rental'])
 
-CurrentUser = Annotated[User, Depends(get_current_user)]
 Session = Annotated[AsyncSession, Depends(get_session)]
+CurrentUser = Annotated[User, Depends(get_current_user)]
 role_checker = Depends(RoleChecker([Role.ADMIN]))
-
-def set_rental_attr(rental):
-	# Set the models dictionaries in the json response.
-	setattr(rental, 'costume', rental.costumes.__dict__)
-	setattr(rental, 'user', rental.users.__dict__)
-
-	return rental
+rental_service = RentalService()
 
 
-# admin
 @router.get('/', response_model=RentalList, dependencies=role_checker)
 async def read_rental_list(
 	session: Session,
@@ -43,109 +30,36 @@ async def read_rental_list(
 	skip: int = 0,
 	limit: int = 100,
 ):
-	db_rental_list_scalar = await session.scalars(
-		select(Rental).offset(skip).limit(limit)
-	)
-	db_rental_list = db_rental_list_scalar.all()
-
-	rental_list = [set_rental_attr(rental_obj) for rental_obj in db_rental_list]
-
-	return {'rental_list': rental_list}
+	rentals = await rental_service.get_all(session, skip, limit)
+	return {'rental_list': rentals}
 
 
-# admin
 @router.get('/{rental_id}', response_model=RentalSchema, dependencies=role_checker)
 async def read_rental(session: Session, current_user: CurrentUser, rental_id: int):
-	db_rental = await session.scalar(select(Rental).where(Rental.id == rental_id))
-
-	if not db_rental:
-		raise HTTPException(404, detail='Rental not registered.')
-
-	set_rental_attr(db_rental)
-
-	return db_rental
+	rental = await rental_service.get_by_id(session, rental_id)
+	return rental
 
 
 @router.post('/', response_model=RentalSchema, status_code=201)
 async def create_rental(
 	session: Session, current_user: CurrentUser, rental: RentalInput
 ):
-	# Costume query
-	db_costume = await session.scalar(
-		select(Costume).where(Costume.id == rental.costume_id)
-	)
-	if not db_costume:
-		raise HTTPException(400, detail='Costume not registered.')
-
-	if db_costume.availability == CostumeAvailability.UNAVAILABLE:
-		raise HTTPException(400, detail='Costume unavailable.')
-
-	db_costume.availability = CostumeAvailability.UNAVAILABLE
-
-	# Customer query (User with CUSTOMER role)
-	db_customer = await session.scalar(
-		select(User).where(User.id == rental.customer_id, User.role == Role.CUSTOMER)
-	)
-	if not db_customer:
-		raise HTTPException(400, detail='Customer not registered.')
-
-	# Rental set
-	db_rental = Rental(
-		user_id=current_user.id,
-		costume_id=rental.costume_id,
-	)
-
-	session.add(db_rental)
-	await session.commit()
-	await session.refresh(db_rental)
-
-	set_rental_attr(db_rental)
-
+	db_rental = await rental_service.create(session, rental, current_user)
 	return db_rental
 
 
-# refazer: PUT
-@router.patch('/{rental_id}', response_model=RentalSchema)
-async def patch_rental(
-	session: Session,
-	current_user: CurrentUser,
-	rental_id: int,
-	rental: RentalPatch,
-):
-	db_rental = await session.scalar(select(Rental).where(Rental.id == rental_id))
-
-	if not db_rental:
-		raise HTTPException(404, detail='Rental not registered.')
-
-	for key, value in rental.model_dump(exclude_unset=True).items():
-		setattr(db_rental, key, value)
-
-	if db_rental.return_date < db_rental.rental_date:
-		raise HTTPException(400, detail="Rental date can't be later than return date.")
-
-	session.add(db_rental)
-	await session.commit()
-	await session.refresh(db_rental)
-
-	set_rental_attr(db_rental)
-
-	return db_rental
+# @router.patch('/{rental_id}', response_model=RentalSchema)
+# async def patch_rental(
+# 	session: Session,
+# 	current_user: CurrentUser,
+# 	rental_id: int,
+# 	rental: RentalPatch,
+# ):
+# 	db_rental = await rental_service.patch(session, rental_id, rental)
+# 	return db_rental
 
 
 @router.delete('/{rental_id}', response_model=Message)
 async def delete_rental(session: Session, current_user: CurrentUser, rental_id: int):
-	db_rental = await session.scalar(select(Rental).where(Rental.id == rental_id))
-
-	if not db_rental:
-		raise HTTPException(404, detail='Rental not registered.')
-
-	# Updating unavailable costume to available
-	db_costume = await session.scalar(
-		select(Costume).where(Costume.id == db_rental.costume_id)
-	)
-	db_costume.availability = CostumeAvailability.AVAILABLE  # type: ignore
-
-	await session.delete(db_rental)
-	await session.commit()
-
+	await rental_service.delete(session, rental_id)
 	return {'message': 'Rental register has been deleted successfully.'}
