@@ -2,8 +2,11 @@ from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config.setup_logging import get_logger
 from app.models import Costume, CostumeAvailability, Rental, Role, User
-from app.schemas import RentalInput  #, RentalPatch
+from app.schemas import RentalInput
+
+logger = get_logger(__name__)
 
 
 class RentalService:
@@ -12,13 +15,19 @@ class RentalService:
 		rentals = rentals_scalar.all()
 		for rental in rentals:
 			self._set_rental_attr(rental)
+		logger.info('Rentals retrieved', extra={'count': len(rentals)})
 		return rentals
 
 	async def get_by_id(self, session: AsyncSession, rental_id: int) -> Rental:
 		rental = await session.scalar(select(Rental).where(Rental.id == rental_id))
 		if not rental:
+			logger.error('Rental not found', extra={'rental_id': rental_id})
 			raise HTTPException(404, detail='Rental not registered.')
 		self._set_rental_attr(rental)
+		logger.info(
+			'Rental retrieved',
+			extra={'rental_id': rental_id, 'costume_id': rental.costume_id},
+		)
 		return rental
 
 	async def create(
@@ -28,8 +37,16 @@ class RentalService:
 			select(Costume).where(Costume.id == rental_data.costume_id)
 		)
 		if not db_costume:
+			logger.error(
+				'Costume not found for rental',
+				extra={'costume_id': rental_data.costume_id},
+			)
 			raise HTTPException(400, detail='Costume not registered.')
 		if db_costume.availability == CostumeAvailability.UNAVAILABLE:
+			logger.error(
+				'Costume unavailable for rental',
+				extra={'costume_id': rental_data.costume_id},
+			)
 			raise HTTPException(400, detail='Costume unavailable.')
 		db_costume.availability = CostumeAvailability.UNAVAILABLE
 
@@ -39,6 +56,10 @@ class RentalService:
 			)
 		)
 		if not db_customer:
+			logger.error(
+				'Customer not found for rental',
+				extra={'customer_id': rental_data.customer_id},
+			)
 			raise HTTPException(400, detail='Customer not registered.')
 
 		db_rental = Rental(
@@ -49,41 +70,34 @@ class RentalService:
 		await session.commit()
 		await session.refresh(db_rental)
 		self._set_rental_attr(db_rental)
+		logger.info(
+			'Rental created',
+			extra={
+				'rental_id': db_rental.id,
+				'costume_id': rental_data.costume_id,
+				'user_id': current_user.id,
+			},
+		)
 		return db_rental
-
-	# async def patch(
-	# 	self, session: AsyncSession, rental_id: int, rental_data: RentalPatch
-	# ) -> Rental:
-	# 	db_rental = await session.scalar(select(Rental).where(Rental.id == rental_id))
-	# 	if not db_rental:
-	# 		raise HTTPException(404, detail='Rental not registered.')
-
-	# 	for key, value in rental_data.model_dump(exclude_unset=True).items():
-	# 		setattr(db_rental, key, value)
-
-	# 	if db_rental.return_date < db_rental.rental_date:
-	# 		raise HTTPException(
-	# 			400, detail="Rental date can't be later than return date."
-	# 		)
-
-		# session.add(db_rental)
-		# await session.commit()
-		# await session.refresh(db_rental)
-		# self._set_rental_attr(db_rental)
-		# return db_rental
 
 	async def delete(self, session: AsyncSession, rental_id: int) -> None:
 		db_rental = await session.scalar(select(Rental).where(Rental.id == rental_id))
 		if not db_rental:
+			logger.error(
+				'Rental not found for deletion', extra={'rental_id': rental_id}
+			)
 			raise HTTPException(404, detail='Rental not registered.')
 
 		db_costume = await session.scalar(
 			select(Costume).where(Costume.id == db_rental.costume_id)
 		)
-		db_costume.availability = CostumeAvailability.AVAILABLE  # type: ignore
-
+		db_costume.availability = CostumeAvailability.AVAILABLE
 		await session.delete(db_rental)
 		await session.commit()
+		logger.info(
+			'Rental deleted, costume available',
+			extra={'rental_id': rental_id, 'costume_id': db_costume.id},
+		)
 
 	def _set_rental_attr(self, rental: Rental) -> Rental:
 		setattr(rental, 'costume', rental.costumes.__dict__)

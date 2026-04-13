@@ -8,3 +8,4 @@ class Settings(BaseSettings):
 	SECRET_KEY: str
 	ALGORITHM: str
 	ACCESS_TOKEN_EXPIRE_DAYS: int
+	LOG_LEVEL: str = 'INFO'
