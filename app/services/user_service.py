@@ -40,7 +40,7 @@ class UserService:
 			name=user_data.name,
 			email=user_data.email,
 			passwordHash=hashed_password,
-			phone=user_data.phone_number,
+			phone=user_data.phone,
 			role=user_data.role,
 			cpf='',
 			address='',
@@ -58,7 +58,7 @@ class UserService:
 		user_id: int,
 		user_data: UserInput,
 		current_user: User,
-	) -> User:
+	) -> User | None:
 		if current_user.role != Role.ADMIN or current_user.id != user_id:
 			raise HTTPException(status_code=403, detail='Not enough permissions')
 
@@ -68,7 +68,7 @@ class UserService:
 			db_user.name = user_data.name
 			db_user.passwordHash = get_password_hash(user_data.password)
 			db_user.email = user_data.email
-			db_user.phone = user_data.phone_number
+			db_user.phone = user_data.phone
 			db_user.role = (
 				Role.CUSTOMER if not current_user.role == Role.ADMIN else user_data.role
 			)

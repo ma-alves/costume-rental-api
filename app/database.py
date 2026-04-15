@@ -6,7 +6,7 @@ from .settings import Settings
 
 DATABASE_URL = Settings().DATABASE_URL
 
-async_engine = create_async_engine(DATABASE_URL, echo=True)
+async_engine = create_async_engine(DATABASE_URL, echo=False)
 AsyncSessionLocal = async_sessionmaker(
 	async_engine, expire_on_commit=False, class_=AsyncSession, autoflush=False
 )

@@ -25,7 +25,7 @@ class UserInput(BaseModel):
 	name: str
 	password: str
 	email: EmailStr
-	phone_number: str
+	phone: str
 	cpf: str = ''
 	address: str = ''
 	role: Role = Role.CUSTOMER
@@ -35,7 +35,7 @@ class UserOutput(BaseModel):
 	id: int
 	name: str
 	email: EmailStr
-	phone_number: str
+	phone: str
 	role: Role = Role.CUSTOMER
 
 	class Config:
