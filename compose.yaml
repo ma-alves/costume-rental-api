@@ -1,41 +1,41 @@
 services:
- db:
-   image: postgres:17
-   environment:
-     POSTGRES_DB: appdb
-     POSTGRES_USER: postgres
-     POSTGRES_PASSWORD: postgres
-   ports:
-     - "5432:5432"
-   volumes:
-     - postgres_data:/var/lib/postgresql/data
-   healthcheck:
-     test: ["CMD-SHELL", "pg_isready -U postgres"]
-     interval: 10s
-     timeout: 5s
-     retries: 5
- 
- web:
-   build: .
-   command:  >
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: appdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build: .
+    command: >
       sh -c "uv run alembic upgrade head &&
-             uv run uvicorn app.main:app --port 8000 --host 0.0.0.0"
-   container_name: costume-rental-api
-   ports:
-     - "8000:8000"
-   depends_on:
-     db:
-      condition: service_healthy
-   develop:
-     watch: 
-       - action: sync
-         path: .
-         target: /app
-         initial_sync: true
-       - action: rebuild
-         path: uv.lock
-   env_file:
-     - .env
+             uv run uvicorn app.main:app --port 8000 --host 0.0.0.0 --reload"
+    container_name: costume-rental-api
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    develop:
+      watch:
+        - action: sync+restart
+          path: .
+          target: /app
+          initial_sync: true
+        - action: rebuild
+          path: uv.lock
+    env_file:
+      - .env
 
 volumes:
-   postgres_data:
+  postgres_data:

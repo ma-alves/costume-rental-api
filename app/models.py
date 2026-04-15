@@ -49,7 +49,7 @@ class User:
 	passwordHash: Mapped[str]
 	address: Mapped[str]
 	phone: Mapped[Optional[str]] = mapped_column(String(11))
-	role: Mapped[Role] = mapped_column(default=Role.CUSTOMER)
+	role: Mapped[Role] = mapped_column(String(10), default=Role.CUSTOMER)
 	created_at: Mapped[datetime] = mapped_column(default=datetime.now())
 
 	rental: Mapped[List['Rental']] = relationship(back_populates='users', init=False)

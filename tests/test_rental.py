@@ -1,6 +1,6 @@
 from fastapi.testclient import TestClient
 
-from app.routes.rental_route import set_rental_attr
+from app.services.rental_service import RentalService
 
 
 def test_read_rental(client: TestClient, user, token, rental):
@@ -8,7 +8,7 @@ def test_read_rental(client: TestClient, user, token, rental):
 		f'/api/v1/rental/{rental.id}',
 		headers={'Authorization': f'Bearer {token}'},
 	)
-	set_rental_attr(rental)
+	RentalService()._set_rental_attr(rental)
 
 	assert response.status_code == 200
 	assert response.json()['costume']['id'] == rental.costumes.id

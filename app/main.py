@@ -1,59 +1,19 @@
 from contextlib import asynccontextmanager
-import logging
-import time
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.responses import RedirectResponse
 
-from .config.setup_logging import (
-	get_logger,
-	set_request_id,
-	setup_logging,
-)
 from .routes import auth_route, costume_route, rental_route, user_route
 from .schemas import Message
-from .settings import Settings
-
-logger = get_logger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-	settings = Settings()
-	log_level = getattr(logging, settings.LOG_LEVEL.upper(), logging.INFO)
-	setup_logging(level=log_level)
 	yield
 
 
 app = FastAPI(lifespan=lifespan)
-
-
-@app.middleware('http')
-async def log_request_middleware(request: Request, call_next):
-	set_request_id()
-	start_time = time.time()
-
-	logger.info(
-		'Request started',
-		extra={'method': request.method, 'path': request.url.path},
-	)
-
-	response = await call_next(request)
-
-	duration = time.time() - start_time
-	logger.info(
-		'Request completed',
-		extra={
-			'method': request.method,
-			'path': request.url.path,
-			'status_code': response.status_code,
-			'duration_ms': round(duration * 1000, 2),
-		},
-	)
-
-	return response
-
 
 origins = ['*']
 
