@@ -34,6 +34,7 @@ class UserService:
 		existing = await self.get_by_email(session, user_data.email)
 		if existing:
 			raise HTTPException(400, detail='User already registered.')
+
 		hashed_password = get_password_hash(user_data.password)
 
 		db_user = User(

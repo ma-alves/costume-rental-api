@@ -1,19 +1,45 @@
+import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from starlette.responses import RedirectResponse
 
+from .config.setup_logging import setup_logging
 from .routes import auth_route, costume_route, rental_route, user_route
 from .schemas import Message
+
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+	setup_logging()
 	yield
 
 
 app = FastAPI(lifespan=lifespan)
+
+
+@app.exception_handler(Exception)
+async def exception_handler(request: Request, exc: Exception):
+	logger.exception(f'Unhandled error: {exc}')
+	return JSONResponse(status_code=500, content={'detail': 'Internal server error'})
+
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+	logger.warning(f'HTTP {exc.status_code}: {exc.detail}')
+	return JSONResponse(status_code=exc.status_code, content={'detail': exc.detail})
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+	logger.warning(f'Validation error: {exc.errors()}')
+	return JSONResponse(status_code=422, content={'detail': exc.errors()})
+
 
 origins = ['*']
 

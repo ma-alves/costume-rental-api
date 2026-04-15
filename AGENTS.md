@@ -52,6 +52,7 @@ app/
 - Fixtures in `tests/conftest.py`
 - Factory Boy for test data (`tests/factories.py`)
 - Default test password: `test1234`
+- **Only run tests when explicitly asked by the user**
 
 ## Migrations
 - **DO NOT modify migrations/ manually** - use Alembic only
