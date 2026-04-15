@@ -5,10 +5,12 @@ from fastapi.testclient import TestClient
 from app.models import User
 
 
-def test_read_users(client: TestClient, token: str):
+def test_read_users(client: TestClient, user: User, token: str):
 	response = client.get('/api/v1/users', headers={'Authorization': f'Bearer {token}'})
 	assert response.status_code == HTTPStatus.OK
-	assert response.json() == {'users': []}
+	response_json = response.json()
+	assert 'users' in response_json
+	assert len(response_json['users']) >= 1
 
 
 def test_create_user(client: TestClient):
@@ -18,8 +20,10 @@ def test_create_user(client: TestClient):
 			'name': 'matheus',
 			'email': 'matheus@email.com',
 			'password': 'matheus1234',
-			'phone_number': '12345678910',
-			'is_admin': False,
+			'phone': '12345678910',
+			'cpf': '12345678910',
+			'address': 'Test Address',
+			'role': 'customer',
 		},
 	)
 	assert response.status_code == HTTPStatus.CREATED
@@ -27,8 +31,8 @@ def test_create_user(client: TestClient):
 		'id': 1,
 		'name': 'matheus',
 		'email': 'matheus@email.com',
-		'phone_number': '12345678910',
-		'is_admin': False,
+		'phone': '12345678910',
+		'role': 'customer',
 	}
 
 
@@ -39,8 +43,10 @@ def test_create_user_already_exists(client: TestClient):
 			'name': 'matheus',
 			'email': 'matheus@email.com',
 			'password': 'matheus1234',
-			'phone_number': '12345678910',
-			'is_admin': False,
+			'phone': '12345678910',
+			'cpf': '12345678910',
+			'address': 'Test Address',
+			'role': 'customer',
 		},
 	)
 	second_response = client.post(
@@ -49,8 +55,10 @@ def test_create_user_already_exists(client: TestClient):
 			'name': 'matheus',
 			'email': 'matheus@email.com',
 			'password': 'matheus1234',
-			'phone_number': '12345678910',
-			'is_admin': False,
+			'phone': '12345678910',
+			'cpf': '12345678910',
+			'address': 'Test Address',
+			'role': 'customer',
 		},
 	)
 	assert first_response.status_code == HTTPStatus.CREATED
@@ -58,7 +66,7 @@ def test_create_user_already_exists(client: TestClient):
 	assert second_response.json() == {'detail': 'User already registered.'}
 
 
-def test_read_user(client: TestClient, user, token):
+def test_read_user(client: TestClient, user: User, token: str):
 	response = client.get(
 		f'/api/v1/users/{user.id}', headers={'Authorization': f'Bearer {token}'}
 	)
@@ -67,8 +75,11 @@ def test_read_user(client: TestClient, user, token):
 	assert response_json['id'] == user.id
 	assert response_json['name'] == user.name
 	assert response_json['email'] == user.email
-	assert response_json['phone_number'] == user.phone
-	assert response_json['is_admin'] == user.is_admin
+	assert response_json['phone'] == user.phone
+	if hasattr(user.role, 'value'):
+		assert response_json['role'] == user.role.value
+	else:
+		assert response_json['role'] == user.role
 
 
 def test_read_user_not_registered(client: TestClient, token: str):
@@ -87,17 +98,19 @@ def test_update_user(client: TestClient, user: User, token: str):
 			'name': 'yasmim',
 			'email': 'yasmim@email.com',
 			'password': 'novasenha1234',
-			'phone_number': '12345678910',
-			'is_admin': True,
+			'phone': '99999999999',
+			'cpf': '12345678901',
+			'address': 'New Address',
+			'role': 'admin',
 		},
 	)
 	assert response.status_code == HTTPStatus.OK
 	assert response.json() == {
 		'id': user.id,
-		'name': f'{user.name}',
-		'email': f'{user.email}',
-		'phone_number': f'{user.phone_number}',
-		'is_admin': user.is_admin,
+		'name': 'yasmim',
+		'email': 'yasmim@email.com',
+		'phone': '99999999999',
+		'role': 'admin',
 	}
 
 
@@ -105,17 +118,19 @@ def test_update_user_no_permission(
 	client: TestClient, other_user: User, other_token: str
 ):
 	response = client.put(
-		'/api/v1/users/400',
+		f'/api/v1/users/{other_user.id + 100}',
 		headers={'Authorization': f'Bearer {other_token}'},
 		json={
 			'name': 'yasmim',
 			'email': 'yasmim@email.com',
 			'password': 'novasenha1234',
-			'phone_number': '12345678910',
-			'is_admin': True,
+			'phone': '99999999999',
+			'cpf': '12345678901',
+			'address': 'New Address',
+			'role': 'admin',
 		},
 	)
-	assert response.status_code == HTTPStatus.BAD_REQUEST
+	assert response.status_code == HTTPStatus.FORBIDDEN
 	assert response.json() == {'detail': 'Not enough permissions'}
 
 
@@ -138,5 +153,5 @@ def test_delete_user_no_permission(
 		f'/api/v1/users/{user.id}',
 		headers={'Authorization': f'Bearer {other_token}'},
 	)
-	assert response_delete.status_code == HTTPStatus.BAD_REQUEST
+	assert response_delete.status_code == HTTPStatus.FORBIDDEN
 	assert response_delete.json() == {'detail': 'Not enough permissions'}

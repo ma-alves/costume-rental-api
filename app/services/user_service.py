@@ -21,7 +21,7 @@ class UserService:
 	async def get_by_id(self, session: AsyncSession, user_id: int) -> User | None:
 		user = await session.scalar(select(User).where(User.id == user_id))
 		if not user:
-			return None
+			raise HTTPException(status_code=404, detail='User not registered.')
 		return user
 
 	async def get_by_email(self, session: AsyncSession, email: str) -> Optional[User]:

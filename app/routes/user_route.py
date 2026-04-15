@@ -35,8 +35,7 @@ async def read_users(
 	dependencies=[role_checker],
 )
 async def read_user(session: Session, current_user: CurrentUser, user_id: int):
-	user = await user_service.get_by_id(session, user_id)
-	return user
+	return await user_service.get_by_id(session, user_id)
 
 
 @router.post('/', response_model=UserOutput, status_code=201)
