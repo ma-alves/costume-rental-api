@@ -1,20 +1,41 @@
 # Costume Rental API
-A RESTful API for a costume rental service using FastAPI as its core technology, as well as JWT for authentication and Pytest for testing.
+A RESTful API for a costume rental service using FastAPI, JWT authentication, and async SQLAlchemy.
 
 ## Tech Stack
 - [FastAPI](https://fastapi.tiangolo.com/) - Web Framework
 - [PostgreSQL](https://www.postgresql.org) - SQL Database
-- [SQLAlchemy](https://www.sqlalchemy.org/) - SQL Toolkit and ORM
+- [SQLAlchemy](https://www.sqlalchemy.org/) - SQL Toolkit and ORM (async)
+- [uv](https://github.com/astral-sh/uv) - Package Manager
 - [Docker Compose](https://docs.docker.com/compose/) - Environment Development
 - [GitHub Actions](https://docs.github.com/en/actions) - CI/CD
 - [Pytest](https://docs.pytest.org/en/8.2.x/) - Testing
 - [PyJWT](https://pypi.org/project/PyJWT/) - Authentication
-- [Alembic](https://alembic.sqlalchemy.org/en/latest/) - Migrating
+- [Alembic](https://alembic.sqlalchemy.org/en/latest/) - Migrations
+- [Passlib](https://passlib.readthedocs.io/) - Password Hashing
+
+## Project Structure
+```
+app/
+  main.py           # Entry point, registers routers
+  models.py         # SQLAlchemy models (User, Costume, Rental)
+  schemas.py        # Pydantic schemas
+  database.py       # Async session factory
+  security.py       # JWT & password utilities
+  routes/           # API routers (auth, users, costumes, rental)
+  services/         # Business logic layer
+
+tests/
+  conftest.py       # Pytest fixtures
+  factories.py      # Factory Boy test data
+  test_*_service.py # Unit tests (mocked)
+  test_*_route.py   # Integration tests
+```
 
 ## Getting Started
 1. Clone the repository:
 ```sh
 git clone https://github.com/ma-alves/costume-rental-api.git
+cd costume-rental-api
 ```
 2. Copy the environment variables to .env and change the values:
 ```sh
@@ -26,65 +47,101 @@ docker compose up --build
 ```
 4. The API Swagger will be available at http://localhost:8000/docs
 
+## API Endpoints
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | /api/v1/auth/token | No | Get JWT token |
+| GET | /api/v1/users | Admin | List all users |
+| GET | /api/v1/users/{id} | Admin | Get user by ID |
+| POST | /api/v1/users | No | Create new user |
+| PUT | /api/v1/users/{id} | Yes | Update user |
+| DELETE | /api/v1/users/{id} | Yes | Delete user |
+| GET | /api/v1/costumes | No | List costumes |
+| GET | /api/v1/costumes/{id} | No | Get costume by ID |
+| POST | /api/v1/costumes | Admin | Create costume |
+| PUT | /api/v1/costumes/{id} | Admin | Update costume |
+| DELETE | /api/v1/costumes/{id} | Admin | Delete costume |
+| GET | /api/v1/rental | Admin | List rentals |
+| GET | /api/v1/rental/{id} | Admin | Get rental by ID |
+| POST | /api/v1/rental | No | Create rental |
+| DELETE | /api/v1/rental/{id} | No | Delete rental |
+
+## Authentication
+- JWT Bearer token authentication
+- Roles: `admin` (full access) and `customer` (limited access)
+- Token expires in 7 days (configurable)
+
+## Testing
+```sh
+# Run all tests
+uv run pytest -s -x -vv
+
+# Run with coverage
+uv run pytest -s -x --cov=app -vv
+
+# Run specific test file
+uv run pytest tests/test_user_route.py -vv
+```
+
+Domain test structure:
+- `test_*_service.py` - Unit tests with mocked database sessions
+- `test_*_route.py` - Integration tests with TestClient
+
 ## Examples
 ### List Costumes
-- Request
 ```sh
 curl -X 'GET' \
   'http://127.0.0.1:8000/api/v1/costumes/' \
   -H 'accept: application/json'
 ```
-- Successful Response
+
+Response:
 ```json
 {
   "costumes": [
     {
-      "id": 0,
-      "name": "string",
-      "description": "string",
-      "fee": 0,
+      "id": 1,
+      "name": "Batman Suit",
+      "description": "Full Batman costume",
+      "fee": 150.00,
       "availability": "available"
     }
   ]
 }
 ```
+
 ### Create Rental
-- Request
 ```sh
 curl -X 'POST' \
   'http://127.0.0.1:8000/api/v1/rental/' \
   -H 'accept: application/json' \
   -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer <token>' \
   -d '{
-  "costume_id": 0,
-  "customer_id": 0
+  "costume_id": 1,
+  "customer_id": 2
 }'
 ```
-- Successful Response
+
+Response:
 ```json
 {
-  "rental_date": "2025-12-25T19:59:58.512Z",
-  "return_date": "2025-12-25T19:59:58.512Z",
+  "rental_date": "2024-12-25T10:00:00",
+  "return_date": "2025-01-01T10:00:00",
   "costume": {
-    "id": 0,
-    "name": "string",
-    "description": "string",
-    "fee": 0,
-    "availability": "available"
-  },
-  "customer": {
-    "cpf": "string",
-    "name": "string",
-    "email": "string",
-    "phone_number": "string",
-    "address": "string"
+    "id": 1,
+    "name": "Batman Suit",
+    "description": "Full Batman costume",
+    "fee": 150.00,
+    "availability": "unavailable"
   },
   "user": {
-    "id": 0,
-    "name": "string",
-    "email": "user@example.com",
-    "phone_number": "string",
-    "is_admin": true
+    "id": 2,
+    "name": "John Doe",
+    "email": "john@example.com",
+    "phone": "12345678901",
+    "role": "customer"
   }
 }
 ```

@@ -26,21 +26,13 @@ app/
   schemas.py        # Pydantic schemas
   database.py       # Async session factory
   security.py       # JWT & password utilities
-  routes/           # API routers (auth, users, costumes, rental, customers)
-  services/         # Service layer (empty - refactoring in progress)
+  routes/           # API routers (auth, users, costumes, rental)
+  services/         # Service layer (costume, rental, user)
 ```
 
-## Critical Context
-
-### Refactoring in Progress
-- **Customer model/routes are being deleted** - consolidate to `User` model with `Role` enum (ADMIN/CUSTOMER)
-- Services layer is being added (files exist but empty)
-- Do not add new code to customer routes
-
 ### Known Issues
-- **Patch rental endpoint is broken** - noted in code, needs fixing
+- **Patch rental endpoint missing** - PATCH route not implemented, tests skipped
 - **fastapi-limiter v0.2.0 is broken** - middleware.py not installed, waiting on PR #78
-- **Customer route imports non-existent model** - `app/routes/customers.py:8` imports `Customer` but models.py only has `User` with `Role` enum
 
 ### Code Style (enforced by ruff)
 - Single quotes: `'string'`
@@ -52,7 +44,7 @@ app/
 - Fixtures in `tests/conftest.py`
 - Factory Boy for test data (`tests/factories.py`)
 - Default test password: `test1234`
-- **Only run tests when explicitly asked by the user**
+- **Test structure**: `test_{entity}_service.py` for unit tests, `test_{entity}_route.py` for integration tests
 
 ## Migrations
 - **DO NOT modify migrations/ manually** - use Alembic only
