@@ -9,3 +9,4 @@ class Settings(BaseSettings):
 	ALGORITHM: str
 	ACCESS_TOKEN_EXPIRE_DAYS: int
 	LOG_LEVEL: str = 'INFO'
+	STRIPE_SECRET_KEY: str
