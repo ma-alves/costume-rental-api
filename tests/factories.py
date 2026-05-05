@@ -1,62 +1,118 @@
-from datetime import datetime, timedelta
-from random import randint
+import datetime
+from typing import Optional
 
-import factory
-import factory.fuzzy
+import sqlalchemy
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import (
-	Costume,
-	CostumeAvailability,
-	Rental,
-	Role,
-	User,
+    User,
+    Costume,
+    Rental,
+    Payment,
+    StripeCustomer,
 )
+from app.security import get_password_hash
 
 
-class UserFactory(factory.Factory):
-	class Meta:
-		model = User
-
-	name = factory.Faker('name', locale='pt_BR')
-	email = factory.Faker('free_email')
-	passwordHash = factory.LazyAttribute(lambda obj: f'{obj.name}1234')
-	phone = factory.Faker('phone_number')
-	role = Role.ADMIN
-	cpf = factory.Faker('random_number', digits=11, fix_len=True)
-	address = factory.Faker('address', locale='pt_BR')
-
-
-class CostumeFactory(factory.Factory):
-	class Meta:
-		model = Costume
-
-	# id = factory.Sequence(lambda n: n + 1)
-	name = factory.Faker('name', locale='pt_BR')
-	description = factory.Faker('text')
-	fee = float(randint(0, 1000))
-	availability = factory.fuzzy.FuzzyChoice(CostumeAvailability)
-
-
-class CustomerFactory(factory.Factory):
-	class Meta:
-		model = User
-
-	cpf = factory.Faker('random_number', digits=11, fix_len=True)
-	name = factory.Faker('name', locale='pt_BR')
-	email = factory.Faker('free_email')
-	phone = factory.Faker('phone_number')
-	address = factory.Faker('address', locale='pt_BR')
-	passwordHash = factory.LazyAttribute(lambda obj: f'{obj.name}1234')
-	role = Role.CUSTOMER
+async def create_user(
+    session: AsyncSession,
+    name: str = 'Test User',
+    email: str = 'test@example.com',
+    password: str = 'test1234',
+    phone: str = '12345678901',
+    cpf: str = '12345678901',
+    address: str = 'Test Address',
+    role: str = 'CUSTOMER',
+) -> User:
+    """Create and persist a User instance for tests."""
+    user = User(
+        name=name,
+        email=email,
+        passwordHash=get_password_hash(password),
+        phone=phone,
+        cpf=cpf,
+        address=address,
+        role=role,
+    )
+    session.add(user)
+    await session.commit()
+    await session.refresh(user)
+    return user
 
 
-# __init__() got unexpected argument 'users' | 'customers' | 'costumes'
-# then int(1) it is!
-class RentalFactory(factory.Factory):
-	class Meta:
-		model = Rental
+async def create_costume(
+    session: AsyncSession,
+    name: str = 'Test Costume',
+    description: str = 'A test costume',
+    fee: float = 100.0,
+    availability: str = 'AVAILABLE',
+) -> Costume:
+    """Create and persist a Costume instance for tests."""
+    costume = Costume(
+        name=name,
+        description=description,
+        fee=fee,
+        availability=availability,
+    )
+    session.add(costume)
+    await session.commit()
+    await session.refresh(costume)
+    return costume
 
-	user_id = 1
-	costume_id = 1
-	rental_date = datetime.now()
-	return_date = factory.LazyAttribute(lambda obj: obj.rental_date + timedelta(days=7))
+
+async def create_rental(
+    session: AsyncSession,
+    user_id: int,
+    costume_id: int,
+    rent_days: int = 7,
+) -> Rental:
+    """Create and persist a Rental instance for tests."""
+    now = datetime.datetime.now()
+    rental = Rental(
+        user_id=user_id,
+        costume_id=costume_id,
+        rental_date=now,
+        return_date=now + datetime.timedelta(days=rent_days),
+    )
+    session.add(rental)
+    await session.commit()
+    await session.refresh(rental)
+    return rental
+
+
+async def create_payment(
+    session: AsyncSession,
+    rental_id: int,
+    stripe_payment_intent_id: str = 'pi_123456789',
+    amount: int = 10000,
+    status: str = 'PENDING',
+    currency: str = 'brl',
+) -> Payment:
+    """Create and persist a Payment instance for tests."""
+    payment = Payment(
+        rental_id=rental_id,
+        stripe_payment_intent_id=stripe_payment_intent_id,
+        amount=amount,
+        status=status,
+        currency=currency,
+    )
+    session.add(payment)
+    await session.commit()
+    await session.refresh(payment)
+    return payment
+
+
+async def create_stripe_customer(
+    session: AsyncSession,
+    user_id: int,
+    stripe_customer_id: str = 'cus_123456789',
+) -> StripeCustomer:
+    """Create and persist a StripeCustomer instance for tests."""
+    customer = StripeCustomer(
+        user_id=user_id,
+        stripe_customer_id=stripe_customer_id,
+    )
+    session.add(customer)
+    await session.commit()
+    await session.refresh(customer)
+    return customer

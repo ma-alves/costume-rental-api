@@ -22,10 +22,9 @@ async def stripe_webhook(
 	Handle Stripe webhook events.
 	Verifies webhook signature and updates payment/rental status.
 	"""
-	# Get the webhook secret
+
 	webhook_secret = Settings().STRIPE_WEBHOOK_SECRET
 
-	# Get payload and signature
 	payload = await request.body()
 	sig_header = request.headers.get('stripe-signature')
 
@@ -37,12 +36,11 @@ async def stripe_webhook(
 	except ValueError as e:
 		logger.error(f'Invalid payload: {e}')
 		raise HTTPException(status_code=400, detail='Invalid payload')
-	except stripe.error.SignatureVerenceError as e:
+	except stripe.SignatureVerificationError as e:
 		logger.error(f'Invalid signature: {e}')
 		raise HTTPException(status_code=400, detail='Invalid signature')
 
 	try:
-		# Handle different event types
 		if event['type'] == 'payment_intent.succeeded':
 			payment_intent = event['data']['object']
 			await _handle_payment_succeeded(payment_intent, session)
@@ -66,7 +64,6 @@ async def _handle_payment_succeeded(payment_intent: dict, session: AsyncSession)
 	"""Handle successful payment intent."""
 	payment_intent_id = payment_intent['id']
 
-	# Find payment record
 	result = await session.execute(
 		select(Payment).where(Payment.stripe_payment_intent_id == payment_intent_id)
 	)
@@ -76,10 +73,8 @@ async def _handle_payment_succeeded(payment_intent: dict, session: AsyncSession)
 		logger.warning(f'Payment record not found for intent: {payment_intent_id}')
 		return
 
-	# Update payment status
 	payment.status = PaymentStatus.SUCCEEDED
 
-	# Update rental
 	rental = await session.get(Rental, payment.rental_id)
 	if rental:
 		rental.payment_status = PaymentStatus.SUCCEEDED
@@ -92,7 +87,6 @@ async def _handle_payment_failed(payment_intent: dict, session: AsyncSession):
 	"""Handle failed payment intent."""
 	payment_intent_id = payment_intent['id']
 
-	# Find payment record
 	result = await session.execute(
 		select(Payment).where(Payment.stripe_payment_intent_id == payment_intent_id)
 	)
@@ -102,10 +96,8 @@ async def _handle_payment_failed(payment_intent: dict, session: AsyncSession):
 		logger.warning(f'Payment record not found for intent: {payment_intent_id}')
 		return
 
-	# Update payment status
 	payment.status = PaymentStatus.FAILED
 
-	# Update rental
 	rental = await session.get(Rental, payment.rental_id)
 	if rental:
 		rental.payment_status = PaymentStatus.FAILED
@@ -122,7 +114,6 @@ async def _handle_charge_refunded(charge: dict, session: AsyncSession):
 		logger.warning('Refund event missing payment_intent')
 		return
 
-	# Find payment record
 	result = await session.execute(
 		select(Payment).where(Payment.stripe_payment_intent_id == payment_intent_id)
 	)
@@ -132,11 +123,9 @@ async def _handle_charge_refunded(charge: dict, session: AsyncSession):
 		logger.warning(f'Payment record not found for intent: {payment_intent_id}')
 		return
 
-	# Update payment status
 	payment.status = PaymentStatus.REFUNDED
 	payment.refunded_amount = charge.get('amount_refunded', 0)
 
-	# Update rental
 	rental = await session.get(Rental, payment.rental_id)
 	if rental:
 		rental.payment_status = PaymentStatus.REFUNDED
