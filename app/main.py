@@ -8,7 +8,7 @@ from fastapi.responses import JSONResponse
 from starlette.responses import RedirectResponse
 
 from .config.setup_logging import setup_logging
-from .routes import auth_route, costume_route, rental_route, user_route
+from .routes import auth_route, costume_route, rental_route, user_route, payment_route, webhook_route
 from .schemas import Message
 
 logger = logging.getLogger(__name__)
@@ -55,6 +55,8 @@ app.include_router(auth_route.router)
 app.include_router(user_route.router)
 app.include_router(costume_route.router)
 app.include_router(rental_route.router)
+app.include_router(payment_route.router)
+app.include_router(webhook_route.router)
 
 
 @app.get('/')
