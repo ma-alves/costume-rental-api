@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timedelta
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 import pytest_asyncio
@@ -17,7 +17,7 @@ from app.models import (
 	StripeCustomer,
 	User,
 )
-from app.auth_schema import (
+from app.schemas.payment_schema import (
 	PaymentCaptureRequest,
 	IntentCreateRequest,
 	PaymentRefundRequest,
@@ -120,35 +120,38 @@ class TestPaymentServicePrivateHelpers:
 class TestPaymentServiceCreateCustomer:
 	"""Tests for _create_stripe_customer private method."""
 
-	@patch('stripe.Customer.create')
-	def test_create_stripe_customer_success(self, mock_create):
+	def _make_service(self):
+		service = PaymentService()
+		service.client = MagicMock()
+		return service
+
+	def test_create_stripe_customer_success(self):
 		"""Test successful Stripe customer creation."""
 		mock_customer = MagicMock()
 		mock_customer.id = 'cus_123456789'
-		mock_create.return_value = mock_customer
 
-		service = PaymentService()
+		service = self._make_service()
+		service.client.v1.Customer.create.return_value = mock_customer
 		customer_id = service._create_stripe_customer(
 			email='test@example.com', name='Test User'
 		)
 
 		assert customer_id == 'cus_123456789'
-		mock_create.assert_called_once_with(
+		service.client.v1.Customer.create.assert_called_once_with(
 			email='test@example.com', name='Test User'
 		)
 
-	@patch('stripe.Customer.create')
-	def test_create_stripe_customer_stripe_error(self, mock_create):
+	def test_create_stripe_customer_stripe_error(self):
 		"""Test Stripe customer creation with Stripe error."""
-		import stripe
+		from stripe import StripeError
 
-		mock_create.side_effect = stripe.StripeError('Customer creation failed')
+		service = self._make_service()
+		service.client.v1.Customer.create.side_effect = StripeError(
+			'Customer creation failed'
+		)
 
-		service = PaymentService()
 		with pytest.raises(HTTPException) as exc_info:
-			service._create_stripe_customer(
-				email='test@example.com', name='Test User'
-			)
+			service._create_stripe_customer(email='test@example.com', name='Test User')
 
 		assert exc_info.value.status_code == 500
 
@@ -156,25 +159,29 @@ class TestPaymentServiceCreateCustomer:
 class TestPaymentServicePaymentIntent:
 	"""Tests for PaymentIntent operations."""
 
-	@patch('stripe.PaymentIntent.create')
-	def test_create_stripe_payment_intent_success(self, mock_create):
+	def _make_service(self):
+		service = PaymentService()
+		service.client = MagicMock()
+		return service
+
+	def test_create_stripe_payment_intent_success(self):
 		"""Test successful Stripe PaymentIntent creation."""
 		mock_pi = MagicMock()
 		mock_pi.client_secret = 'pi_secret_123'
 		mock_pi.id = 'pi_123456789'
-		mock_create.return_value = mock_pi
 
-		service = PaymentService()
-		client_secret, payment_intent_id = service._create_stripe_payment_intent(
+		service = self._make_service()
+		service.client.v1.PaymentIntent.create.return_value = mock_pi
+
+		result = service._create_stripe_payment_intent(
 			amount=10000, currency='brl', customer_id='cus_123456789'
 		)
 
-		assert client_secret == 'pi_secret_123'
-		assert payment_intent_id == 'pi_123456789'
-		mock_create.assert_called_once()
+		assert result['client_secret'] == 'pi_secret_123'
+		assert result['id'] == 'pi_123456789'
+		service.client.v1.PaymentIntent.create.assert_called_once()
 
-	@patch('stripe.PaymentIntent.retrieve')
-	def test_retrieve_stripe_payment_intent_success(self, mock_retrieve):
+	def test_retrieve_stripe_payment_intent_success(self):
 		"""Test successful PaymentIntent retrieval."""
 		mock_pi = MagicMock()
 		mock_pi.id = 'pi_123456789'
@@ -183,25 +190,24 @@ class TestPaymentServicePaymentIntent:
 		mock_pi.currency = 'brl'
 		mock_pi.client_secret = 'pi_secret_123'
 		mock_pi.charges.data = []
-		mock_retrieve.return_value = mock_pi
 
-		service = PaymentService()
+		service = self._make_service()
+		service.client.v1.PaymentIntent.retrieve.return_value = mock_pi
 		result = service._retrieve_stripe_payment_intent('pi_123456789')
 
 		assert result['id'] == 'pi_123456789'
 		assert result['status'] == 'succeeded'
 		assert result['amount'] == 10000
 
-	@patch('stripe.PaymentIntent.modify')
-	def test_capture_stripe_payment_intent_success(self, mock_modify):
+	def test_capture_stripe_payment_intent_success(self):
 		"""Test successful PaymentIntent capture."""
 		mock_pi = MagicMock()
 		mock_pi.id = 'pi_123456789'
 		mock_pi.status = 'succeeded'
 		mock_pi.charges.data = []
-		mock_modify.return_value = mock_pi
 
-		service = PaymentService()
+		service = self._make_service()
+		service.client.v1.PaymentIntent.modify.return_value = mock_pi
 		pi_id, status = service._capture_stripe_payment_intent('pi_123456789')
 
 		assert pi_id == 'pi_123456789'
@@ -211,32 +217,35 @@ class TestPaymentServicePaymentIntent:
 class TestPaymentServiceRefund:
 	"""Tests for refund operations."""
 
-	@patch('stripe.Refund.create')
-	def test_refund_stripe_payment_full_success(self, mock_refund):
+	def _make_service(self):
+		service = PaymentService()
+		service.client = MagicMock()
+		return service
+
+	def test_refund_stripe_payment_full_success(self):
 		"""Test successful full refund."""
 		mock_ref = MagicMock()
 		mock_ref.id = 're_123456789'
 		mock_ref.status = 'succeeded'
 		mock_ref.amount = 10000
-		mock_refund.return_value = mock_ref
 
-		service = PaymentService()
+		service = self._make_service()
+		service.client.v1.Refund.create.return_value = mock_ref
 		refund_id, status, amount = service._refund_stripe_payment('pi_123456789')
 
 		assert refund_id == 're_123456789'
 		assert status == 'succeeded'
 		assert amount == 10000
 
-	@patch('stripe.Refund.create')
-	def test_refund_stripe_payment_partial_success(self, mock_refund):
+	def test_refund_stripe_payment_partial_success(self):
 		"""Test successful partial refund."""
 		mock_ref = MagicMock()
 		mock_ref.id = 're_123456789'
 		mock_ref.status = 'succeeded'
 		mock_ref.amount = 5000
-		mock_refund.return_value = mock_ref
 
-		service = PaymentService()
+		service = self._make_service()
+		service.client.v1.Refund.create.return_value = mock_ref
 		refund_id, status, amount = service._refund_stripe_payment(
 			'pi_123456789', amount=5000
 		)
@@ -259,17 +268,13 @@ class TestPaymentServiceStatusMapping:
 			service._get_payment_status_enum('requires_confirmation')
 			== PaymentStatus.PENDING
 		)
-		assert (
-			service._get_payment_status_enum('processing') == PaymentStatus.PENDING
-		)
+		assert service._get_payment_status_enum('processing') == PaymentStatus.PENDING
 
 	def test_get_payment_status_enum_succeeded(self):
 		"""Test mapping of succeeded status."""
 		service = PaymentService()
 
-		assert (
-			service._get_payment_status_enum('succeeded') == PaymentStatus.CAPTURED
-		)
+		assert service._get_payment_status_enum('succeeded') == PaymentStatus.CAPTURED
 
 	def test_get_payment_status_enum_requires_capture(self):
 		"""Test mapping of requires_capture status."""
@@ -291,37 +296,42 @@ class TestPaymentServiceStatusMapping:
 		service = PaymentService()
 
 		assert (
-			service._get_payment_status_enum('unknown_status')
-			== PaymentStatus.PENDING
+			service._get_payment_status_enum('unknown_status') == PaymentStatus.PENDING
 		)
 
 
 class TestPaymentServicePaymentMethods:
 	"""Tests for payment method operations."""
 
-	@patch('stripe.PaymentMethod.list')
-	def test_list_stripe_payment_methods_success(self, mock_list):
+	def _make_service(self):
+		service = PaymentService()
+		service.client = MagicMock()
+		return service
+
+	def test_list_stripe_payment_methods_success(self):
 		"""Test successful listing of payment methods."""
 		mock_method1 = MagicMock()
 		mock_method1.id = 'pm_123'
 		mock_method1.type = 'card'
-		mock_list.return_value.data = [mock_method1]
 
-		service = PaymentService()
+		service = self._make_service()
+		service.client.v1.PaymentMethod.list.return_value = MagicMock(
+			data=[mock_method1]
+		)
+
 		methods = service._list_stripe_payment_methods('cus_123456789')
 
 		assert len(methods) == 1
 		assert methods[0].id == 'pm_123'
 
-	@patch('stripe.PaymentMethod.detach')
-	def test_delete_stripe_payment_method_success(self, mock_detach):
+	def test_delete_stripe_payment_method_success(self):
 		"""Test successful payment method deletion."""
 		mock_pm = MagicMock()
 		mock_pm.id = 'pm_123'
 		mock_pm.status = 'disconnected'
-		mock_detach.return_value = mock_pm
 
-		service = PaymentService()
+		service = self._make_service()
+		service.client.v1.PaymentMethod.detach.return_value = mock_pm
 		result = service._delete_stripe_payment_method('pm_123')
 
 		assert result['id'] == 'pm_123'
@@ -344,14 +354,15 @@ class TestPaymentServicePublicMethods:
 	):
 		"""Test successful payment intent creation."""
 		mock_create_customer.return_value = 'cus_123456789'
-		mock_create_pi.return_value = ('pi_secret_123', 'pi_123456789')
+		mock_create_pi.return_value = {
+			'client_secret': 'pi_secret_123',
+			'id': 'pi_123456789',
+		}
 
 		service = PaymentService()
 		request = IntentCreateRequest(rental_id=test_rental.id)
 
-		response = await service.create_payment_intent(
-			test_session, test_user, request
-		)
+		response = await service.create_payment_intent(test_session, test_user, request)
 
 		assert response.client_secret == 'pi_secret_123'
 		assert response.payment_intent_id == 'pi_123456789'
@@ -485,7 +496,8 @@ class TestPaymentServicePublicMethods:
 		"""Test refund amount validation."""
 		service = PaymentService()
 		request = PaymentRefundRequest(
-			payment_intent_id='pi_123456789', amount=20000  # More than payment amount
+			payment_intent_id='pi_123456789',
+			amount=20000,  # More than payment amount
 		)
 
 		with pytest.raises(HTTPException) as exc_info:

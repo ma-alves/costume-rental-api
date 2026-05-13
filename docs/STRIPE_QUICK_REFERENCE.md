@@ -1,6 +1,8 @@
 # Stripe Integration - Quick Reference & Testing Guide
 
-## 🚀 Quick Start
+*AI generated document reviewed and maintained by ma-alves.*
+
+## Quick Start
 
 ### 1. Run Migrations
 ```bash
@@ -96,7 +98,7 @@ curl -X DELETE http://localhost:8000/api/v1/payments/saved-cards/pm_xxxxx \
 ## Testing Payment Flows
 
 ### Test Case 1: Create Payment for Rental
-```python
+
 # Prerequisites: User logged in, Rental created
 
 1. Create Payment Intent
@@ -120,10 +122,10 @@ curl -X DELETE http://localhost:8000/api/v1/payments/saved-cards/pm_xxxxx \
    Body: {"payment_intent_id": "pi_xxxxx"}
    
    ✓ Should move status to CAPTURED
-```
+
 
 ### Test Case 2: Partial Refund
-```python
+
 1. Create and complete payment (as above)
 
 2. Initiate partial refund (e.g., 50% of R$ 100 = 5000 cents)
@@ -135,10 +137,10 @@ curl -X DELETE http://localhost:8000/api/v1/payments/saved-cards/pm_xxxxx \
    ✓ Payment.status should be REFUNDED
    ✓ Rental.payment_status should be REFUNDED
    ✓ Customer should receive R$ 50 refund
-```
+
 
 ### Test Case 3: Save and Use Card
-```python
+
 1. First payment (setup_future_usage enabled automatically)
    POST /api/v1/payments/create-payment-intent
    
@@ -153,10 +155,10 @@ curl -X DELETE http://localhost:8000/api/v1/payments/saved-cards/pm_xxxxx \
    DELETE /api/v1/payments/saved-cards/pm_xxxxx
    
    ✓ Card should be removed from Stripe
-```
+
 
 ### Test Case 4: Failed Payment
-```python
+
 1. Use test card that declines: 4000000000000002
 
 2. Frontend confirms payment
@@ -165,32 +167,6 @@ curl -X DELETE http://localhost:8000/api/v1/payments/saved-cards/pm_xxxxx \
 3. Webhook: payment_intent.payment_failed
    ✓ Payment.status should be FAILED
    ✓ Rental.payment_status should be FAILED
-```
-
----
-
-## Database Schema Verification
-
-### Check Payment Table
-```sql
-SELECT * FROM payments;
--- Columns: id, rental_id, stripe_payment_intent_id, amount, status, 
---          currency, refunded_amount, created_at, updated_at
-```
-
-### Check StripeCustomer Table
-```sql
-SELECT * FROM stripe_customers;
--- Columns: id, user_id, stripe_customer_id, created_at
-```
-
-### Check Updated Rental Table
-```sql
-SELECT id, user_id, costume_id, rental_date, return_date, 
-       actual_return_date, payment_status, payment_amount 
-FROM rental;
--- New columns: actual_return_date, payment_status, payment_amount
-```
 
 ---
 
@@ -260,13 +236,13 @@ stripe payment_intents retrieve pi_xxxxx
 
 ### Test Stripe Connection
 ```python
-import stripe
+from stripe import StripeClient
 from app.settings import Settings
 
-stripe.api_key = Settings().STRIPE_SECRET_KEY
+client = StripeClient(Settings().STRIPE_SECRET_KEY)
 
 # Create test customer
-customer = stripe.Customer.create(
+customer = client.v1.Customer.create(
     email="test@example.com",
     name="Test User"
 )
@@ -308,20 +284,20 @@ uv run alembic current
 
 1. **Indexing**: Payment queries filtered by rental_id and stripe_payment_intent_id are indexed via unique constraints
 2. **Caching**: Consider caching StripeCustomer lookups for frequent users
-3. **Batch Processing**: For bulk refunds, consider async job queue (Celery/RQ)
+3. **Batch Processing**: For bulk refunds, consider async job queue (Celery/RQ) #TODO
 4. **Idempotency**: All operations use idempotency keys to prevent duplicates on retries
 
 ---
 
 ## Security Best Practices
 
-✅ Implemented:
+Implemented:
 - Webhook signature verification required
 - User ownership validation on all endpoints
 - Sensitive keys in environment variables (never in code)
 - Proper error handling without exposing sensitive info
 
-🔒 Additional Recommendations:
+Additional Recommendations (source: Claude Haiku 4.5):
 - Enable API key rotation in Stripe Dashboard
 - Use restricted API keys (scoped permissions)
 - Monitor failed payment attempts for fraud

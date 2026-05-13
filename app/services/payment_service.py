@@ -1,7 +1,7 @@
 import uuid
 from typing import Optional, Tuple
 
-import stripe
+from stripe import StripeClient, StripeError
 from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -24,7 +24,7 @@ from app.settings import Settings
 
 class PaymentService:
 	def __init__(self):
-		stripe.api_key = Settings().STRIPE_SECRET_KEY  # type: ignore
+		self.client = StripeClient(Settings().STRIPE_SECRET_KEY)
 
 	# private helpers
 	def _generate_idempotency_key(self, resource_type: str, resource_id: str) -> str:
@@ -32,8 +32,8 @@ class PaymentService:
 
 	def _create_stripe_customer(self, email: str, name: str) -> str:
 		try:
-			customer = stripe.Customer.create(email=email, name=name)
-		except stripe.StripeError as e:
+			customer = self.client.v1.Customer.create(email=email, name=name)
+		except StripeError as e:
 			raise HTTPException(status_code=500, detail=str(e))
 		return customer.id
 
@@ -44,8 +44,8 @@ class PaymentService:
 		customer_id: Optional[str] = None,
 		rental_id: Optional[int] = None,
 		metadata: Optional[dict] = None,
-	) -> Tuple[str | None, str]:
-		"""Create a Stripe PaymentIntent (sync). Returns (client_secret, payment_intent_id)."""
+	) -> dict:
+		"""Create a Stripe PaymentIntent (sync). Returns dict with client_secret and id."""
 		try:
 			params = {
 				'amount': amount,
@@ -63,18 +63,18 @@ class PaymentService:
 			idempotency_key = self._generate_idempotency_key(
 				'payment_intent', f'{customer_id}_{rental_id}'
 			)
-			payment_intent = stripe.PaymentIntent.create(
+			payment_intent = self.client.v1.PaymentIntent.create(
 				**params, idempotency_key=idempotency_key
 			)
-		except stripe.StripeError as e:
+		except StripeError as e:
 			raise HTTPException(status_code=500, detail=str(e))
-		return payment_intent.client_secret, payment_intent.id
+		return {'client_secret': payment_intent.client_secret, 'id': payment_intent.id}
 
 	def _retrieve_stripe_payment_intent(self, payment_intent_id: str) -> dict:
 		"""Retrieve PaymentIntent from Stripe (sync)."""
 		try:
-			payment_intent = stripe.PaymentIntent.retrieve(payment_intent_id)
-		except stripe.StripeError as e:
+			payment_intent = self.client.v1.PaymentIntent.retrieve(payment_intent_id)
+		except StripeError as e:
 			raise HTTPException(status_code=500, detail=str(e))
 		return {
 			'id': payment_intent.id,
@@ -88,46 +88,54 @@ class PaymentService:
 	def _capture_stripe_payment_intent(self, payment_intent_id: str) -> Tuple[str, str]:
 		"""Capture an authorized PaymentIntent (sync). Returns (id, status)."""
 		try:
-			payment_intent = stripe.PaymentIntent.modify(
+			payment_intent = self.client.v1.PaymentIntent.modify(
 				payment_intent_id,
-				idempotency_key=self._generate_idempotency_key('capture', payment_intent_id),
+				idempotency_key=self._generate_idempotency_key(
+					'capture', payment_intent_id
+				),
 			)
 			if payment_intent.status != 'succeeded':
 				charges = payment_intent.charges.data
 				if charges and not charges[0].captured:
-					stripe.Charge.retrieve(charges[0].id).capture()
-		except stripe.StripeError as e:
+					self.client.v1.Charge.retrieve(charges[0].id).capture()
+		except StripeError as e:
 			raise HTTPException(status_code=500, detail=str(e))
 		return payment_intent.id, payment_intent.status
 
 	# TODO! retirar amount externo, usar PRICE_ID
-	def _refund_stripe_payment(self, payment_intent_id: str, amount: Optional[int] = None) -> Tuple[str, str, int]:
+	def _refund_stripe_payment(
+		self, payment_intent_id: str, amount: Optional[int] = None
+	) -> Tuple[str, str, int]:
 		"""Create a refund (sync). Returns (refund_id, status, refund_amount)."""
 		try:
 			params: dict[str, str | int] = {
 				'payment_intent': payment_intent_id,
-				'idempotency_key': self._generate_idempotency_key('refund', payment_intent_id),
+				'idempotency_key': self._generate_idempotency_key(
+					'refund', payment_intent_id
+				),
 			}
 			if amount:
 				params['amount'] = amount
-			refund = stripe.Refund.create(**params)
-		except stripe.StripeError as e:
+			refund = self.client.v1.Refund.create(**params)
+		except StripeError as e:
 			raise HTTPException(status_code=500, detail=str(e))
 		return refund.id, refund.status, refund.amount
 
 	def _list_stripe_payment_methods(self, customer_id: str) -> list:
 		"""List saved cards for a Stripe customer (sync)."""
 		try:
-			methods = stripe.PaymentMethod.list(customer=customer_id, type='card')
-		except stripe.StripeError as e:
+			methods = self.client.v1.PaymentMethod.list(
+				customer=customer_id, type='card'
+			)
+		except StripeError as e:
 			raise HTTPException(status_code=500, detail=str(e))
 		return methods.data
 
 	def _delete_stripe_payment_method(self, payment_method_id: str) -> dict:
 		"""Detach/delete a payment method (sync)."""
 		try:
-			pm = stripe.PaymentMethod.detach(payment_method_id)
-		except stripe.StripeError as e:
+			pm = self.client.v1.PaymentMethod.detach(payment_method_id)
+		except StripeError as e:
 			raise HTTPException(status_code=500, detail=str(e))
 		return {'id': pm.id, 'status': pm.status}
 
@@ -157,14 +165,18 @@ class PaymentService:
 		if not rental:
 			raise HTTPException(status_code=404, detail='Rental not found')
 		if rental.user_id != current_user.id:
-			raise HTTPException(status_code=403, detail='Not authorized to pay for this rental')
+			raise HTTPException(
+				status_code=403, detail='Not authorized to pay for this rental'
+			)
 
 		# 2. Check if payment already exists for this rental
 		existing_payment = await session.execute(
 			select(Payment).where(Payment.rental_id == request.rental_id)
 		)
 		if existing_payment.scalar_one_or_none():
-			raise HTTPException(status_code=400, detail='Payment already exists for this rental')
+			raise HTTPException(
+				status_code=400, detail='Payment already exists for this rental'
+			)
 
 		# 3. Get or create Stripe customer record
 		stripe_customer_record = await session.execute(
@@ -190,7 +202,7 @@ class PaymentService:
 		amount = int(rental.costumes.fee * 100)
 
 		# 5. Create Stripe PaymentIntent
-		client_secret, payment_intent_id = self._create_stripe_payment_intent(
+		payment_intent_result = self._create_stripe_payment_intent(
 			amount=amount,
 			currency='brl',
 			customer_id=stripe_customer_id,
@@ -200,6 +212,8 @@ class PaymentService:
 				'user_id': str(current_user.id),
 			},
 		)
+		client_secret = payment_intent_result['client_secret']
+		payment_intent_id = payment_intent_result['id']
 
 		# 6. Save payment record
 		payment = Payment(
@@ -263,7 +277,9 @@ class PaymentService:
 		"""Capture an authorized payment."""
 		# 1. Verify payment exists and belongs to user
 		payment = await session.execute(
-			select(Payment).where(Payment.stripe_payment_intent_id == request.payment_intent_id)
+			select(Payment).where(
+				Payment.stripe_payment_intent_id == request.payment_intent_id
+			)
 		)
 		payment = payment.scalar_one_or_none()
 		if not payment:
@@ -274,14 +290,14 @@ class PaymentService:
 			raise HTTPException(status_code=403, detail='Not authorized')
 
 		# 2. Capture in Stripe
-		pi_id, status = self._capture_stripe_payment_intent(request.payment_intent_id)
+		payment_intent_id, status = self._capture_stripe_payment_intent(request.payment_intent_id)
 
 		# 3. Update local records
 		payment.status = self._get_payment_status_enum(status)
 		rental.payment_status = PaymentStatus.CAPTURED
 		await session.commit()
 
-		return PaymentCaptureResponse(payment_intent_id=pi_id, status=status)
+		return PaymentCaptureResponse(payment_intent_id=payment_intent_id, status=status)
 
 	async def refund_payment(
 		self,
@@ -292,7 +308,9 @@ class PaymentService:
 		"""Refund a payment (full or partial)."""
 		# 1. Verify payment
 		payment = await session.execute(
-			select(Payment).where(Payment.stripe_payment_intent_id == request.payment_intent_id)
+			select(Payment).where(
+				Payment.stripe_payment_intent_id == request.payment_intent_id
+			)
 		)
 		payment = payment.scalar_one_or_none()
 		if not payment:
@@ -309,7 +327,9 @@ class PaymentService:
 					status_code=400, detail='Refund amount cannot exceed payment amount'
 				)
 			if request.amount <= 0:
-				raise HTTPException(status_code=400, detail='Refund amount must be positive')
+				raise HTTPException(
+					status_code=400, detail='Refund amount must be positive'
+				)
 
 		# 3. Create refund in Stripe
 		refund_id, status, refund_amount = self._refund_stripe_payment(
@@ -322,7 +342,9 @@ class PaymentService:
 		rental.payment_status = PaymentStatus.REFUNDED
 		await session.commit()
 
-		return PaymentRefundResponse(refund_id=refund_id, status=status, amount=refund_amount)
+		return PaymentRefundResponse(
+			refund_id=refund_id, status=status, amount=refund_amount
+		)
 
 	async def create_customer(
 		self, session: AsyncSession, current_user: User

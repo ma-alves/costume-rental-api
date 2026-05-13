@@ -1,4 +1,4 @@
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 from datetime import datetime, timedelta
 
 import pytest
@@ -72,7 +72,10 @@ def customer_token(client: TestClient, customer_user):
 	"""Get customer authentication token."""
 	response = client.post(
 		'/api/v1/auth/token',
-		data={'username': customer_user.email, 'password': customer_user.clean_password},
+		data={
+			'username': customer_user.email,
+			'password': customer_user.clean_password,
+		},
 	)
 	return response.json()['access_token']
 

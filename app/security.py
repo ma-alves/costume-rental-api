@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from .database import get_session
 from .models import User
-from .auth_schema import TokenData
+from app.schemas.auth_schema import TokenData
 from .settings import Settings
 
 settings = Settings()

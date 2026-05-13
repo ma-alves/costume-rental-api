@@ -3,8 +3,9 @@ from typing import List
 
 from pydantic import BaseModel
 
-from schemas.costume_schema import CostumeOutput
-from schemas.user_schema import UserOutput
+from app.schemas.costume_schema import CostumeOutput
+from app.schemas.user_schema import UserOutput
+
 
 class RentalSchema(BaseModel):
 	rental_date: datetime

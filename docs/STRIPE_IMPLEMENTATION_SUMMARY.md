@@ -1,12 +1,14 @@
 # Stripe Integration Implementation - Complete Summary
 
-## ✅ Phases 1, 2, and 3 Completed Successfully
+*AI generated document reviewed and maintained by ma-alves.*
+
+## Phases 1, 2, and 3 Completed Successfully
 
 All three phases of the Stripe integration have been implemented for your costume rental API. Below is a comprehensive breakdown of what was accomplished.
 
 ---
 
-## Phase 1: Database Models & Migration ✅
+## Phase 1: Database Models & Migration
 
 ### New Models Created:
 
@@ -89,11 +91,12 @@ Added three new fields:
    - Maps Stripe statuses to business logic statuses
 
 ### Correct API Usage
-- ✅ Using `stripe.api_key = ...` (not `stripe.StripeClient()`)
-- ✅ Using `stripe.PaymentIntent.create()` (not `client.v1.payment_intents.create()`)
-- ✅ Using `stripe.Refund.create()` with proper params
+- ✅ Using `StripeClient(STRIPE_SECRET_KEY)` (not `stripe.api_key`)
+- ✅ Using `self.client.v1.PaymentIntent.create()` (not `stripe.PaymentIntent.create()`)
+- ✅ Using `self.client.v1.Refund.create()` with proper params
 - ✅ Idempotency keys to prevent duplicate charges
 - ✅ Metadata always includes rental_id for tracking
+- ✅ `_create_stripe_payment_intent` returns a `dict` with `client_secret` and `id` keys
 
 ---
 
@@ -266,8 +269,9 @@ STRIPE_WEBHOOK_SECRET=whsec_your_webhook_secret_here
 
 | Issue | Before | After |
 |-------|--------|-------|
-| Stripe SDK | `stripe.StripeClient(key)` ❌ | `stripe.api_key = key` ✅ |
-| API Calls | `client.v1.payment_intents.create(params={})` ❌ | `stripe.PaymentIntent.create()` ✅ |
+| Stripe SDK | `stripe.api_key = key` ❌ | `StripeClient(STRIPE_SECRET_KEY)` ✅ |
+| API Calls | `stripe.PaymentIntent.create()` ❌ | `self.client.v1.PaymentIntent.create()` ✅ |
+| Return Type (PI) | `Tuple[str, str]` ❌ | `dict` with `client_secret` & `id` ✅ |
 | Refund Params | `amount: str` ❌ | `amount: int` ✅ |
 | Duplicate Charges | None ❌ | Idempotency keys ✅ |
 | Database | No persistence ❌ | Payment & StripeCustomer models ✅ |

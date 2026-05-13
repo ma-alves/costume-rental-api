@@ -64,3 +64,6 @@ ACCESS_TOKEN_EXPIRE_DAYS=7
 - GitHub Actions runs on push to main
 - Order: `uv sync` → `alembic upgrade` → `pytest -s -x -vv`
 - All env vars from GitHub Secrets
+
+## Rules
+- Don't you dare updating stripe client.v1. This is the ACTUAL way of using the SDK. Don't touch it.
