@@ -9,7 +9,7 @@ from starlette.responses import RedirectResponse
 
 from .config.setup_logging import setup_logging
 from .routes import auth_route, costume_route, rental_route, user_route, payment_route, webhook_route
-from .schemas import Message
+from .auth_schema import Message
 
 logger = logging.getLogger(__name__)
 

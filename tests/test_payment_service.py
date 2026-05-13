@@ -17,9 +17,9 @@ from app.models import (
 	StripeCustomer,
 	User,
 )
-from app.schemas import (
+from app.auth_schema import (
 	PaymentCaptureRequest,
-	PaymentCreateRequest,
+	IntentCreateRequest,
 	PaymentRefundRequest,
 )
 from app.security import get_password_hash
@@ -347,7 +347,7 @@ class TestPaymentServicePublicMethods:
 		mock_create_pi.return_value = ('pi_secret_123', 'pi_123456789')
 
 		service = PaymentService()
-		request = PaymentCreateRequest(rental_id=test_rental.id)
+		request = IntentCreateRequest(rental_id=test_rental.id)
 
 		response = await service.create_payment_intent(
 			test_session, test_user, request
@@ -383,7 +383,7 @@ class TestPaymentServicePublicMethods:
 		await test_session.commit()
 
 		service = PaymentService()
-		request = PaymentCreateRequest(rental_id=test_rental.id)
+		request = IntentCreateRequest(rental_id=test_rental.id)
 
 		with pytest.raises(HTTPException) as exc_info:
 			await service.create_payment_intent(test_session, other_user, request)

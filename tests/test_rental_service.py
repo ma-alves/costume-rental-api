@@ -6,7 +6,7 @@ from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Costume, CostumeAvailability, Rental, Role, User
-from app.schemas import RentalInput
+from app.auth_schema import RentalInput
 from app.services.rental_service import RentalService
 
 

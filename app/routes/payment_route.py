@@ -7,8 +7,8 @@ from app.database import get_session
 from app.models import User
 from app.security import get_current_user
 from app.services.payment_service import PaymentService
-from app.schemas import (
-    PaymentCreateRequest,
+from app.schemas.payment_schema import (
+    IntentCreateRequest,
     PaymentIntentResponse,
     PaymentCaptureRequest,
     PaymentCaptureResponse,
@@ -29,7 +29,7 @@ payment_service = PaymentService()
 @router.post('/create-payment-intent', response_model=PaymentIntentResponse)
 async def create_payment_intent(
     current_user: CurrentUser,
-    request: PaymentCreateRequest,
+    request: IntentCreateRequest,
     session: Session,
 ):
     return await payment_service.create_payment_intent(session, current_user, request)

@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Role, User
-from app.schemas import UserInput
+from app.schemas.user_schema import UserInput
 from app.security import get_password_hash
 
 
@@ -18,7 +18,7 @@ class UserService:
 			return None
 		return users
 
-	async def get_by_id(self, session: AsyncSession, user_id: int) -> User | None:
+	async def get_by_id(self, session: AsyncSession, user_id: int) -> User:
 		user = await session.scalar(select(User).where(User.id == user_id))
 		if not user:
 			raise HTTPException(status_code=404, detail='User not registered.')

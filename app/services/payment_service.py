@@ -7,9 +7,9 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import PaymentStatus, Rental, StripeCustomer, User, Payment
-from app.schemas import (
+from app.schemas.payment_schema import (
 	PaymentMethodResponse,
-	PaymentCreateRequest,
+	IntentCreateRequest,
 	PaymentIntentResponse,
 	PaymentCaptureRequest,
 	PaymentCaptureResponse,
@@ -24,15 +24,13 @@ from app.settings import Settings
 
 class PaymentService:
 	def __init__(self):
-		stripe.api_key = Settings().STRIPE_SECRET_KEY
+		stripe.api_key = Settings().STRIPE_SECRET_KEY  # type: ignore
 
 	# private helpers
 	def _generate_idempotency_key(self, resource_type: str, resource_id: str) -> str:
-		"""Generate a consistent idempotency key for payment operations."""
 		return f'{resource_type}:{resource_id}:{uuid.uuid4()}'
 
 	def _create_stripe_customer(self, email: str, name: str) -> str:
-		"""Create a Stripe customer (sync)."""
 		try:
 			customer = stripe.Customer.create(email=email, name=name)
 		except stripe.StripeError as e:
@@ -151,7 +149,7 @@ class PaymentService:
 		self,
 		session: AsyncSession,
 		current_user: User,
-		request: PaymentCreateRequest,
+		request: IntentCreateRequest,
 	) -> PaymentIntentResponse:
 		"""Full business logic to create a payment intent for a rental."""
 		# 1. Verify rental exists and belongs to user
