@@ -17,6 +17,8 @@ from app.main import app
 from app.models import (
 	Costume,
 	CostumeAvailability,
+	Payment,
+	PaymentStatus,
 	Rental,
 	Role,
 	User,
@@ -190,3 +192,32 @@ async def rental(test_session: Session):
 	test_rental = await test_session.scalar(rental_query)
 
 	return test_rental
+
+
+@pytest_asyncio.fixture
+async def customer_rental(
+	test_session: Session, other_user: User, available_costume: Costume
+):
+	rental = Rental(
+		user_id=other_user.id,
+		costume_id=available_costume.id,
+	)
+	test_session.add(rental)
+	await test_session.commit()
+	await test_session.refresh(rental)
+	return rental
+
+
+@pytest_asyncio.fixture
+async def customer_payment(test_session: Session, customer_rental: Rental):
+	payment = Payment(
+		rental_id=customer_rental.id,
+		stripe_payment_intent_id='pi_123456789',
+		amount=10000,
+		status=PaymentStatus.PENDING,
+		currency='brl',
+	)
+	test_session.add(payment)
+	await test_session.commit()
+	await test_session.refresh(payment)
+	return payment

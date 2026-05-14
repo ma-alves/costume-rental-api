@@ -1,86 +1,13 @@
 import json
-from datetime import datetime, timedelta
 from unittest.mock import patch
 
 import pytest
-import pytest_asyncio
 from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import (
-	Costume,
-	CostumeAvailability,
-	Payment,
 	PaymentStatus,
-	Rental,
-	Role,
-	User,
 )
-from app.security import get_password_hash
-
-
-@pytest_asyncio.fixture
-async def webhook_user(test_session: AsyncSession):
-	"""Create a test user for webhook tests."""
-	user = User(
-		name='Test User',
-		email='test@example.com',
-		passwordHash=get_password_hash('test1234'),
-		phone='12345678901',
-		cpf='12345678901',
-		address='Test Address',
-		role=Role.CUSTOMER,
-	)
-	test_session.add(user)
-	await test_session.commit()
-	await test_session.refresh(user)
-	return user
-
-
-@pytest_asyncio.fixture
-async def webhook_costume(test_session: AsyncSession):
-	"""Create a test costume for webhook tests."""
-	costume = Costume(
-		name='Test Costume',
-		description='A test costume',
-		fee=100.0,
-		availability=CostumeAvailability.AVAILABLE,
-	)
-	test_session.add(costume)
-	await test_session.commit()
-	await test_session.refresh(costume)
-	return costume
-
-
-@pytest_asyncio.fixture
-async def webhook_rental(test_session: AsyncSession, webhook_user, webhook_costume):
-	"""Create a test rental for webhook tests."""
-	rental = Rental(
-		user_id=webhook_user.id,
-		costume_id=webhook_costume.id,
-		rental_date=datetime.now(),
-		return_date=datetime.now() + timedelta(days=7),
-	)
-	test_session.add(rental)
-	await test_session.commit()
-	await test_session.refresh(rental)
-	return rental
-
-
-@pytest_asyncio.fixture
-async def webhook_payment(test_session: AsyncSession, webhook_rental):
-	"""Create a test payment for webhook tests."""
-	payment = Payment(
-		rental_id=webhook_rental.id,
-		stripe_payment_intent_id='pi_123456789',
-		amount=10000,
-		status=PaymentStatus.PENDING,
-		currency='brl',
-	)
-	test_session.add(payment)
-	await test_session.commit()
-	await test_session.refresh(payment)
-	return payment
 
 
 class TestWebhookSignatureVerification:
@@ -127,12 +54,12 @@ class TestWebhookPaymentIntentSucceeded:
 
 	@patch('stripe.Webhook.construct_event')
 	@pytest.mark.asyncio
-	async def test_webhook_payment_intent_succeeded(
+	async def test_customer_payment_intent_succeeded(
 		self,
 		mock_construct,
 		client: TestClient,
 		test_session: AsyncSession,
-		webhook_payment,
+		customer_payment,
 	):
 		"""Test payment_intent.succeeded webhook handling."""
 		event = {
@@ -141,7 +68,7 @@ class TestWebhookPaymentIntentSucceeded:
 				'object': {
 					'id': 'pi_123456789',
 					'status': 'succeeded',
-					'metadata': {'rental_id': str(webhook_payment.rental_id)},
+					'metadata': {'rental_id': str(customer_payment.rental_id)},
 				}
 			},
 		}
@@ -163,11 +90,11 @@ class TestWebhookPaymentIntentSucceeded:
 		assert response.json()['event_type'] == 'payment_intent.succeeded'
 
 		# Verify payment was updated
-		await test_session.refresh(webhook_payment)
-		assert webhook_payment.status == PaymentStatus.SUCCEEDED
+		await test_session.refresh(customer_payment)
+		assert customer_payment.status == PaymentStatus.SUCCEEDED
 
 	@patch('stripe.Webhook.construct_event')
-	def test_webhook_payment_intent_succeeded_not_found(
+	def test_customer_payment_intent_succeeded_not_found(
 		self,
 		mock_construct,
 		client: TestClient,
@@ -204,12 +131,12 @@ class TestWebhookPaymentIntentFailed:
 
 	@patch('stripe.Webhook.construct_event')
 	@pytest.mark.asyncio
-	async def test_webhook_payment_intent_failed(
+	async def test_customer_payment_intent_failed(
 		self,
 		mock_construct,
 		client: TestClient,
 		test_session: AsyncSession,
-		webhook_payment,
+		customer_payment,
 	):
 		"""Test payment_intent.payment_failed webhook handling."""
 		event = {
@@ -218,7 +145,7 @@ class TestWebhookPaymentIntentFailed:
 				'object': {
 					'id': 'pi_123456789',
 					'status': 'canceled',
-					'metadata': {'rental_id': str(webhook_payment.rental_id)},
+					'metadata': {'rental_id': str(customer_payment.rental_id)},
 				}
 			},
 		}
@@ -239,8 +166,8 @@ class TestWebhookPaymentIntentFailed:
 		assert response.json()['event_type'] == 'payment_intent.payment_failed'
 
 		# Verify payment was updated
-		await test_session.refresh(webhook_payment)
-		assert webhook_payment.status == PaymentStatus.FAILED
+		await test_session.refresh(customer_payment)
+		assert customer_payment.status == PaymentStatus.FAILED
 
 
 class TestWebhookChargeRefunded:
@@ -253,7 +180,7 @@ class TestWebhookChargeRefunded:
 		mock_construct,
 		client: TestClient,
 		test_session: AsyncSession,
-		webhook_payment,
+		customer_payment,
 	):
 		"""Test charge.refunded webhook handling."""
 		event = {
@@ -282,9 +209,9 @@ class TestWebhookChargeRefunded:
 		assert response.json()['event_type'] == 'charge.refunded'
 
 		# Verify payment was updated
-		await test_session.refresh(webhook_payment)
-		assert webhook_payment.status == PaymentStatus.REFUNDED
-		assert webhook_payment.refunded_amount == 5000
+		await test_session.refresh(customer_payment)
+		assert customer_payment.status == PaymentStatus.REFUNDED
+		assert customer_payment.refunded_amount == 5000
 
 	@patch('stripe.Webhook.construct_event')
 	def test_webhook_charge_refunded_missing_payment_intent(

@@ -5,7 +5,7 @@ from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Role, User
-from app.auth_schema import UserInput
+from app.schemas.user_schema import UserInput
 from app.services.user_service import UserService
 
 

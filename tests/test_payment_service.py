@@ -1,18 +1,12 @@
 import uuid
-from datetime import datetime, timedelta
 from unittest.mock import MagicMock, patch
 
 import pytest
-import pytest_asyncio
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import (
-	Costume,
-	CostumeAvailability,
-	Payment,
 	PaymentStatus,
-	Rental,
 	Role,
 	StripeCustomer,
 	User,
@@ -24,70 +18,6 @@ from app.schemas.payment_schema import (
 )
 from app.security import get_password_hash
 from app.services.payment_service import PaymentService
-
-
-@pytest_asyncio.fixture
-async def test_user(test_session: AsyncSession):
-	"""Create a test user."""
-	user = User(
-		name='Test User',
-		email='test@example.com',
-		passwordHash=get_password_hash('test1234'),
-		phone='12345678901',
-		cpf='12345678901',
-		address='Test Address',
-		role=Role.CUSTOMER,
-	)
-	test_session.add(user)
-	await test_session.commit()
-	await test_session.refresh(user)
-	return user
-
-
-@pytest_asyncio.fixture
-async def test_costume(test_session: AsyncSession):
-	"""Create a test costume."""
-	costume = Costume(
-		name='Test Costume',
-		description='A test costume',
-		fee=100.0,
-		availability=CostumeAvailability.AVAILABLE,
-	)
-	test_session.add(costume)
-	await test_session.commit()
-	await test_session.refresh(costume)
-	return costume
-
-
-@pytest_asyncio.fixture
-async def test_rental(test_session: AsyncSession, test_user, test_costume):
-	"""Create a test rental."""
-	rental = Rental(
-		user_id=test_user.id,
-		costume_id=test_costume.id,
-		rental_date=datetime.now(),
-		return_date=datetime.now() + timedelta(days=7),
-	)
-	test_session.add(rental)
-	await test_session.commit()
-	await test_session.refresh(rental)
-	return rental
-
-
-@pytest_asyncio.fixture
-async def test_payment(test_session: AsyncSession, test_rental):
-	"""Create a test payment."""
-	payment = Payment(
-		rental_id=test_rental.id,
-		stripe_payment_intent_id='pi_123456789',
-		amount=10000,
-		status=PaymentStatus.PENDING,
-		currency='brl',
-	)
-	test_session.add(payment)
-	await test_session.commit()
-	await test_session.refresh(payment)
-	return payment
 
 
 class TestPaymentServicePrivateHelpers:
@@ -349,8 +279,8 @@ class TestPaymentServicePublicMethods:
 		mock_create_pi,
 		mock_create_customer,
 		test_session: AsyncSession,
-		test_user,
-		test_rental,
+		other_user,
+		customer_rental,
 	):
 		"""Test successful payment intent creation."""
 		mock_create_customer.return_value = 'cus_123456789'
@@ -360,9 +290,11 @@ class TestPaymentServicePublicMethods:
 		}
 
 		service = PaymentService()
-		request = IntentCreateRequest(rental_id=test_rental.id)
+		request = IntentCreateRequest(rental_id=customer_rental.id)
 
-		response = await service.create_payment_intent(test_session, test_user, request)
+		response = await service.create_payment_intent(
+			test_session, other_user, request
+		)
 
 		assert response.client_secret == 'pi_secret_123'
 		assert response.payment_intent_id == 'pi_123456789'
@@ -376,12 +308,12 @@ class TestPaymentServicePublicMethods:
 		mock_create_pi,
 		mock_create_customer,
 		test_session: AsyncSession,
-		test_user,
-		test_rental,
+		other_user,
+		customer_rental,
 	):
 		"""Test that payment creation checks authorization."""
 		# Create a different user
-		other_user = User(
+		other_user2 = User(
 			name='Other User',
 			email='other@example.com',
 			passwordHash=get_password_hash('test1234'),
@@ -390,14 +322,14 @@ class TestPaymentServicePublicMethods:
 			address='Test Address',
 			role=Role.CUSTOMER,
 		)
-		test_session.add(other_user)
+		test_session.add(other_user2)
 		await test_session.commit()
 
 		service = PaymentService()
-		request = IntentCreateRequest(rental_id=test_rental.id)
+		request = IntentCreateRequest(rental_id=customer_rental.id)
 
 		with pytest.raises(HTTPException) as exc_info:
-			await service.create_payment_intent(test_session, other_user, request)
+			await service.create_payment_intent(test_session, other_user2, request)
 
 		assert exc_info.value.status_code == 403
 
@@ -407,8 +339,8 @@ class TestPaymentServicePublicMethods:
 		self,
 		mock_retrieve_pi,
 		test_session: AsyncSession,
-		test_user,
-		test_payment,
+		other_user,
+		customer_payment,
 	):
 		"""Test successful payment intent retrieval."""
 		mock_retrieve_pi.return_value = {
@@ -421,7 +353,7 @@ class TestPaymentServicePublicMethods:
 
 		service = PaymentService()
 		response = await service.retrieve_payment_intent(
-			test_session, test_user, 'pi_123456789'
+			test_session, other_user, 'pi_123456789'
 		)
 
 		assert response.id == 'pi_123456789'
@@ -433,8 +365,8 @@ class TestPaymentServicePublicMethods:
 		self,
 		mock_capture_pi,
 		test_session: AsyncSession,
-		test_user,
-		test_payment,
+		other_user,
+		customer_payment,
 	):
 		"""Test successful payment capture."""
 		mock_capture_pi.return_value = ('pi_123456789', 'succeeded')
@@ -442,7 +374,7 @@ class TestPaymentServicePublicMethods:
 		service = PaymentService()
 		request = PaymentCaptureRequest(payment_intent_id='pi_123456789')
 
-		response = await service.capture_payment(test_session, test_user, request)
+		response = await service.capture_payment(test_session, other_user, request)
 
 		assert response.payment_intent_id == 'pi_123456789'
 		assert response.status == 'succeeded'
@@ -453,8 +385,8 @@ class TestPaymentServicePublicMethods:
 		self,
 		mock_refund_pi,
 		test_session: AsyncSession,
-		test_user,
-		test_payment,
+		other_user,
+		customer_payment,
 	):
 		"""Test successful payment refund."""
 		mock_refund_pi.return_value = ('re_123456789', 'succeeded', 10000)
@@ -462,7 +394,7 @@ class TestPaymentServicePublicMethods:
 		service = PaymentService()
 		request = PaymentRefundRequest(payment_intent_id='pi_123456789')
 
-		response = await service.refund_payment(test_session, test_user, request)
+		response = await service.refund_payment(test_session, other_user, request)
 
 		assert response.refund_id == 're_123456789'
 		assert response.status == 'succeeded'
@@ -473,8 +405,8 @@ class TestPaymentServicePublicMethods:
 		self,
 		mock_refund_pi,
 		test_session: AsyncSession,
-		test_user,
-		test_payment,
+		other_user,
+		customer_payment,
 	):
 		"""Test successful partial payment refund."""
 		mock_refund_pi.return_value = ('re_123456789', 'succeeded', 5000)
@@ -482,7 +414,7 @@ class TestPaymentServicePublicMethods:
 		service = PaymentService()
 		request = PaymentRefundRequest(payment_intent_id='pi_123456789', amount=5000)
 
-		response = await service.refund_payment(test_session, test_user, request)
+		response = await service.refund_payment(test_session, other_user, request)
 
 		assert response.amount == 5000
 
@@ -490,8 +422,8 @@ class TestPaymentServicePublicMethods:
 	async def test_refund_payment_amount_exceeds_payment(
 		self,
 		test_session: AsyncSession,
-		test_user,
-		test_payment,
+		other_user,
+		customer_payment,
 	):
 		"""Test refund amount validation."""
 		service = PaymentService()
@@ -501,7 +433,7 @@ class TestPaymentServicePublicMethods:
 		)
 
 		with pytest.raises(HTTPException) as exc_info:
-			await service.refund_payment(test_session, test_user, request)
+			await service.refund_payment(test_session, other_user, request)
 
 		assert exc_info.value.status_code == 400
 
@@ -511,16 +443,16 @@ class TestPaymentServicePublicMethods:
 		self,
 		mock_create_customer,
 		test_session: AsyncSession,
-		test_user,
+		other_user,
 	):
 		"""Test successful customer creation."""
 		mock_create_customer.return_value = 'cus_123456789'
 
 		service = PaymentService()
-		response = await service.create_customer(test_session, test_user)
+		response = await service.create_customer(test_session, other_user)
 
 		assert response.stripe_customer_id == 'cus_123456789'
-		assert response.user_id == test_user.id
+		assert response.user_id == other_user.id
 
 	@patch.object(PaymentService, '_list_stripe_payment_methods')
 	@pytest.mark.asyncio
@@ -528,12 +460,12 @@ class TestPaymentServicePublicMethods:
 		self,
 		mock_list_methods,
 		test_session: AsyncSession,
-		test_user,
+		other_user,
 	):
 		"""Test successful card listing."""
 		# Create a Stripe customer record
 		stripe_customer = StripeCustomer(
-			user_id=test_user.id, stripe_customer_id='cus_123456789'
+			user_id=other_user.id, stripe_customer_id='cus_123456789'
 		)
 		test_session.add(stripe_customer)
 		await test_session.commit()
@@ -545,7 +477,7 @@ class TestPaymentServicePublicMethods:
 		mock_list_methods.return_value = [mock_method]
 
 		service = PaymentService()
-		response = await service.list_saved_cards(test_session, test_user)
+		response = await service.list_saved_cards(test_session, other_user)
 
 		assert len(response.payment_methods) == 1
 		assert response.payment_methods[0].id == 'pm_123'
@@ -556,12 +488,12 @@ class TestPaymentServicePublicMethods:
 		self,
 		mock_delete_method,
 		test_session: AsyncSession,
-		test_user,
+		other_user,
 	):
 		"""Test successful card deletion."""
 		# Create a Stripe customer record
 		stripe_customer = StripeCustomer(
-			user_id=test_user.id, stripe_customer_id='cus_123456789'
+			user_id=other_user.id, stripe_customer_id='cus_123456789'
 		)
 		test_session.add(stripe_customer)
 		await test_session.commit()
@@ -569,7 +501,7 @@ class TestPaymentServicePublicMethods:
 		mock_delete_method.return_value = {'id': 'pm_123', 'status': 'disconnected'}
 
 		service = PaymentService()
-		result = await service.delete_saved_card(test_session, test_user, 'pm_123')
+		result = await service.delete_saved_card(test_session, other_user, 'pm_123')
 
 		assert 'message' in result
 		assert result['result']['id'] == 'pm_123'

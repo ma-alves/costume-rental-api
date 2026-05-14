@@ -5,7 +5,7 @@ from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Costume, CostumeAvailability
-from app.auth_schema import CostumeInput
+from app.schemas.costume_schema import CostumeInput
 from app.services.costume_service import CostumeService
 
 

@@ -290,14 +290,18 @@ class PaymentService:
 			raise HTTPException(status_code=403, detail='Not authorized')
 
 		# 2. Capture in Stripe
-		payment_intent_id, status = self._capture_stripe_payment_intent(request.payment_intent_id)
+		payment_intent_id, status = self._capture_stripe_payment_intent(
+			request.payment_intent_id
+		)
 
 		# 3. Update local records
 		payment.status = self._get_payment_status_enum(status)
 		rental.payment_status = PaymentStatus.CAPTURED
 		await session.commit()
 
-		return PaymentCaptureResponse(payment_intent_id=payment_intent_id, status=status)
+		return PaymentCaptureResponse(
+			payment_intent_id=payment_intent_id, status=status
+		)
 
 	async def refund_payment(
 		self,
