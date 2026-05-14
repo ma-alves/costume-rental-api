@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_session
 from app.models import Role, User
-from app.schemas import Token
+from app.schemas.auth_schema import Token
 from app.security import (
 	RoleChecker,
 	create_access_token,

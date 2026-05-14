@@ -3,7 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Costume, CostumeAvailability
-from app.schemas import CostumeInput
+from app.schemas.costume_schema import CostumeInput
 
 
 class CostumeService:

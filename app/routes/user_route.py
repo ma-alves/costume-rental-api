@@ -5,7 +5,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_session
 from app.models import Role, User
-from app.schemas import Message, UserInput, UserList, UserOutput
+from app.schemas.auth_schema import Message
+from app.schemas.user_schema import UserInput, UserList, UserOutput
 from app.security import get_current_user, RoleChecker
 from app.services.user_service import UserService
 

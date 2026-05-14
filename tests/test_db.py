@@ -1,5 +1,5 @@
 import pytest
-from factories import CostumeFactory, RentalFactory, UserFactory
+from factories import create_costume, create_rental, create_user
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -14,18 +14,15 @@ from app.models import (
 
 @pytest.mark.asyncio
 async def test_create_costume(test_session: AsyncSession):
-	new_costume = CostumeFactory()
-
-	test_session.add(new_costume)
-	await test_session.commit()
+	new_costume = await create_costume(test_session)
 
 	costume = await test_session.scalar(
 		select(Costume).where(Costume.id == new_costume.id)
 	)
 
-	assert costume.name == costume.name
-	assert costume.description == costume.description
-	assert costume.fee == costume.fee
+	assert costume.name == new_costume.name
+	assert costume.description == new_costume.description
+	assert costume.fee == new_costume.fee
 	assert (
 		costume.availability == CostumeAvailability.AVAILABLE
 		or costume.availability == CostumeAvailability.UNAVAILABLE
@@ -35,10 +32,7 @@ async def test_create_costume(test_session: AsyncSession):
 
 @pytest.mark.asyncio
 async def test_create_user(test_session: AsyncSession):
-	new_user = UserFactory()
-
-	test_session.add(new_user)
-	await test_session.commit()
+	new_user = await create_user(test_session, role=Role.ADMIN)
 
 	user = await test_session.scalar(select(User).where(User.id == new_user.id))
 
@@ -50,10 +44,7 @@ async def test_create_user(test_session: AsyncSession):
 
 @pytest.mark.asyncio
 async def test_create_customer(test_session: AsyncSession):
-	new_customer = UserFactory(role=Role.CUSTOMER)
-
-	test_session.add(new_customer)
-	await test_session.commit()
+	new_customer = await create_user(test_session, role=Role.CUSTOMER)
 
 	customer = await test_session.scalar(select(User).where(User.id == new_customer.id))
 
@@ -67,9 +58,11 @@ async def test_create_customer(test_session: AsyncSession):
 
 @pytest.mark.asyncio
 async def test_create_rental(test_session: AsyncSession):
-	new_rental = RentalFactory()
-	test_session.add(new_rental)
-	await test_session.commit()
+	costume = await create_costume(test_session)
+	customer = await create_user(test_session, role=Role.CUSTOMER)
+	new_rental = await create_rental(
+		test_session, user_id=customer.id, costume_id=costume.id
+	)
 
 	rental = await test_session.scalar(select(Rental).where(Rental.id == new_rental.id))
 

@@ -3,7 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Costume, CostumeAvailability, Rental, Role, User
-from app.schemas import RentalInput
+from app.schemas.rental_schema import RentalInput
 
 
 class RentalService:
@@ -66,7 +66,10 @@ class RentalService:
 		await session.delete(db_rental)
 		await session.commit()
 
+		# Método interno para adequação ao Pydantic em outputs aninhados, futuramente revisar
+
 	def _set_rental_attr(self, rental: Rental) -> Rental:
+		"""Sets costume and rental attributes on rental.__dict__"""
 		setattr(rental, 'costume', rental.costumes.__dict__)
 		setattr(rental, 'user', rental.users.__dict__)
 		return rental

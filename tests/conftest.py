@@ -1,8 +1,8 @@
 import pytest
 import pytest_asyncio
 from factories import (
-	CostumeFactory,
-	UserFactory,
+	create_costume,
+	create_user,
 )
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -17,6 +17,8 @@ from app.main import app
 from app.models import (
 	Costume,
 	CostumeAvailability,
+	Payment,
+	PaymentStatus,
 	Rental,
 	Role,
 	User,
@@ -62,30 +64,26 @@ def client(test_session: Session):
 @pytest_asyncio.fixture
 async def user(test_session: Session):
 	password = 'test1234'
-	test_user = UserFactory(passwordHash=get_password_hash(password), role=Role.ADMIN)
-
-	test_session.add(test_user)
-	await test_session.commit()
-	await test_session.refresh(test_user)
-
-	test_user.clean_password = 'test1234'
-
+	test_user = await create_user(
+		test_session,
+		email='admin@example.com',
+		password=password,
+		role=Role.ADMIN,
+	)
+	test_user.clean_password = password
 	return test_user
 
 
 @pytest_asyncio.fixture
 async def other_user(test_session: Session):
 	password = 'test1234'
-	test_user = UserFactory(
-		passwordHash=get_password_hash(password), role=Role.CUSTOMER
+	test_user = await create_user(
+		test_session,
+		email='customer@example.com',
+		password=password,
+		role=Role.CUSTOMER,
 	)
-
-	test_session.add(test_user)
-	await test_session.commit()
-	await test_session.refresh(test_user)
-
-	test_user.clean_password = 'test1234'
-
+	test_user.clean_password = password
 	return test_user
 
 
@@ -112,46 +110,28 @@ def other_token(client: TestClient, other_user):
 
 @pytest_asyncio.fixture
 async def costume(test_session: Session):
-	test_costume = CostumeFactory()
-
-	test_session.add(test_costume)
-	await test_session.commit()
-	await test_session.refresh(test_costume)
-
-	return test_costume
+	return await create_costume(test_session)
 
 
 @pytest_asyncio.fixture
 async def available_costume(test_session: Session):
-	test_costume = CostumeFactory(availability=CostumeAvailability.AVAILABLE)
-
-	test_session.add(test_costume)
-	await test_session.commit()
-	await test_session.refresh(test_costume)
-
-	return test_costume
+	return await create_costume(
+		test_session, availability=CostumeAvailability.AVAILABLE
+	)
 
 
 @pytest_asyncio.fixture
 async def unavailable_costume(test_session: Session):
-	test_costume = CostumeFactory(availability=CostumeAvailability.UNAVAILABLE)
-
-	test_session.add(test_costume)
-	await test_session.commit()
-	await test_session.refresh(test_costume)
-
-	return test_costume
+	return await create_costume(
+		test_session, availability=CostumeAvailability.UNAVAILABLE
+	)
 
 
 @pytest_asyncio.fixture
 async def customer(test_session: Session):
-	test_customer = UserFactory(role=Role.CUSTOMER)
-
-	test_session.add(test_customer)
-	await test_session.commit()
-	await test_session.refresh(test_customer)
-
-	return test_customer
+	return await create_user(
+		test_session, email='customer@example.com', role=Role.CUSTOMER
+	)
 
 
 @pytest_asyncio.fixture
@@ -212,3 +192,32 @@ async def rental(test_session: Session):
 	test_rental = await test_session.scalar(rental_query)
 
 	return test_rental
+
+
+@pytest_asyncio.fixture
+async def customer_rental(
+	test_session: Session, other_user: User, available_costume: Costume
+):
+	rental = Rental(
+		user_id=other_user.id,
+		costume_id=available_costume.id,
+	)
+	test_session.add(rental)
+	await test_session.commit()
+	await test_session.refresh(rental)
+	return rental
+
+
+@pytest_asyncio.fixture
+async def customer_payment(test_session: Session, customer_rental: Rental):
+	payment = Payment(
+		rental_id=customer_rental.id,
+		stripe_payment_intent_id='pi_123456789',
+		amount=10000,
+		status=PaymentStatus.PENDING,
+		currency='brl',
+	)
+	test_session.add(payment)
+	await test_session.commit()
+	await test_session.refresh(payment)
+	return payment

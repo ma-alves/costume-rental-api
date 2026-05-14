@@ -6,7 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_session
 from app.models import CostumeAvailability, User, Role
-from app.schemas import CostumeInput, CostumeList, CostumeOutput, Message
+from app.schemas.auth_schema import Message
+from app.schemas.costume_schema import CostumeInput, CostumeList, CostumeOutput
 from app.security import get_current_user, RoleChecker
 from app.services.costume_service import CostumeService
 

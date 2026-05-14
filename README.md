@@ -1,5 +1,8 @@
 # Costume Rental API
-A RESTful API for a costume rental service using FastAPI, JWT authentication, and async SQLAlchemy.
+
+*AI generated document reviewed and maintained by ma-alves.*
+
+RESTful API for a costume rental service built with FastAPI. Follows a layered architecture: routes handle HTTP concerns, services encapsulate business logic, and SQLAlchemy models define the data layer. Authentication via JWT with role-based access (admin/customer). Integrates Stripe for payment processing using `StripeClient`, customers create and authorize payment intents with saved cards, while admins capture or refund payments. Webhooks receive async status updates from Stripe.
 
 ## Tech Stack
 - [FastAPI](https://fastapi.tiangolo.com/) - Web Framework
@@ -7,7 +10,7 @@ A RESTful API for a costume rental service using FastAPI, JWT authentication, an
 - [SQLAlchemy](https://www.sqlalchemy.org/) - SQL Toolkit and ORM (async)
 - [uv](https://github.com/astral-sh/uv) - Package Manager
 - [Docker Compose](https://docs.docker.com/compose/) - Environment Development
-- [GitHub Actions](https://docs.github.com/en/actions) - CI/CD
+- [GitHub Actions](https://docs.github.com/en/actions) - CI
 - [Pytest](https://docs.pytest.org/en/8.2.x/) - Testing
 - [PyJWT](https://pypi.org/project/PyJWT/) - Authentication
 - [Alembic](https://alembic.sqlalchemy.org/en/latest/) - Migrations
@@ -18,7 +21,7 @@ A RESTful API for a costume rental service using FastAPI, JWT authentication, an
 app/
   main.py           # Entry point, registers routers
   models.py         # SQLAlchemy models (User, Costume, Rental)
-  schemas.py        # Pydantic schemas
+  schemas/          # Pydantic schemas
   database.py       # Async session factory
   security.py       # JWT & password utilities
   routes/           # API routers (auth, users, costumes, rental)
@@ -29,6 +32,8 @@ tests/
   factories.py      # Factory Boy test data
   test_*_service.py # Unit tests (mocked)
   test_*_route.py   # Integration tests
+
+docs/               # References
 ```
 
 ## Getting Started

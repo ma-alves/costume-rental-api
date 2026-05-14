@@ -5,8 +5,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_session
 from app.models import Role, User
-from app.schemas import (
-	Message,
+from app.schemas.auth_schema import Message
+from app.schemas.rental_schema import (
 	RentalInput,
 	RentalList,
 	RentalSchema,
