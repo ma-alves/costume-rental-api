@@ -8,9 +8,10 @@ RESTful API for a costume rental service built with FastAPI. Follows a layered a
 - [FastAPI](https://fastapi.tiangolo.com/) - Web Framework
 - [PostgreSQL](https://www.postgresql.org) - SQL Database
 - [SQLAlchemy](https://www.sqlalchemy.org/) - SQL Toolkit and ORM (async)
-- [uv](https://github.com/astral-sh/uv) - Package Manager
+- [Stripe SDK](https://github.com/stripe/stripe-python) - Payment Processing
 - [Docker Compose](https://docs.docker.com/compose/) - Environment Development
 - [GitHub Actions](https://docs.github.com/en/actions) - CI
+- [uv](https://github.com/astral-sh/uv) - Package Manager
 - [Pytest](https://docs.pytest.org/en/8.2.x/) - Testing
 - [PyJWT](https://pypi.org/project/PyJWT/) - Authentication
 - [Alembic](https://alembic.sqlalchemy.org/en/latest/) - Migrations
@@ -57,6 +58,7 @@ docker compose up --build
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
 | POST | /api/v1/auth/token | No | Get JWT token |
+| POST | /api/v1/auth/refresh_token | Admin | Refresh JWT token |
 | GET | /api/v1/users | Admin | List all users |
 | GET | /api/v1/users/{id} | Admin | Get user by ID |
 | POST | /api/v1/users | No | Create new user |
@@ -69,8 +71,16 @@ docker compose up --build
 | DELETE | /api/v1/costumes/{id} | Admin | Delete costume |
 | GET | /api/v1/rental | Admin | List rentals |
 | GET | /api/v1/rental/{id} | Admin | Get rental by ID |
-| POST | /api/v1/rental | No | Create rental |
-| DELETE | /api/v1/rental/{id} | No | Delete rental |
+| POST | /api/v1/rental | Yes | Create rental |
+| DELETE | /api/v1/rental/{id} | Yes | Delete rental |
+| POST | /api/v1/payments/create-payment-intent | Yes | Create payment intent |
+| GET | /api/v1/payments/payment-intent/{id} | Yes | Retrieve payment intent |
+| POST | /api/v1/payments/capture | Yes | Capture payment |
+| POST | /api/v1/payments/refund | Yes | Refund payment |
+| POST | /api/v1/payments/create-customer | Yes | Create Stripe customer |
+| GET | /api/v1/payments/saved-cards | Yes | List saved cards |
+| DELETE | /api/v1/payments/saved-cards/{payment_method_id} | Yes | Delete saved card |
+| POST | /api/v1/webhooks/stripe | No | Stripe webhook |
 
 ## Authentication
 - JWT Bearer token authentication
