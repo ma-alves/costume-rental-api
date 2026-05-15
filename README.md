@@ -2,7 +2,7 @@
 
 *AI generated document reviewed and maintained by ma-alves.*
 
-RESTful API for a costume rental service built with FastAPI. Follows a layered architecture: routes handle HTTP concerns, services encapsulate business logic, and SQLAlchemy models define the data layer. Authentication via JWT with role-based access (admin/customer). Integrates Stripe for payment processing using `StripeClient`, customers create and authorize payment intents with saved cards, while admins capture or refund payments. Webhooks receive async status updates from Stripe.
+RESTful API for a costume rental service built with FastAPI. Follows a layered architecture: routes handle HTTP concerns, services encapsulate business logic, and SQLAlchemy models define the data layer. Authentication via JWT with role-based access (admin/customer). Integrates Stripe for payment processing, customers create and authorize payment intents with saved cards, while admins capture or refund payments. Webhooks receive async status updates from Stripe.
 
 ## Tech Stack
 - [FastAPI](https://fastapi.tiangolo.com/) - Web Framework
@@ -88,6 +88,9 @@ docker compose up --build
 - Token expires in 7 days (configurable)
 
 ## Testing
+
+Uses Pytest with an in-memory SQLite database for fast, isolated test runs. Fixtures in conftest.py provide test data and session management.
+
 ```sh
 # Run all tests
 uv run pytest -s -x -vv
@@ -153,8 +156,8 @@ Response:
   },
   "user": {
     "id": 2,
-    "name": "John Doe",
-    "email": "john@example.com",
+    "name": "Matheus Alves",
+    "email": "matheus@example.com",
     "phone": "12345678901",
     "role": "customer"
   }
