@@ -1,6 +1,7 @@
 from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload  # greenlet async and querying issue >:(
 
 from app.models import Costume, CostumeAvailability, Rental, Role, User
 from app.schemas.rental_schema import RentalInput
@@ -8,7 +9,12 @@ from app.schemas.rental_schema import RentalInput
 
 class RentalService:
 	async def get_all(self, session: AsyncSession, skip: int = 0, limit: int = 100):
-		rentals_scalar = await session.scalars(select(Rental).offset(skip).limit(limit))
+		rentals_scalar = await session.scalars(
+			select(Rental)
+			.options(selectinload(Rental.costumes), selectinload(Rental.users))
+			.offset(skip)
+			.limit(limit)
+		)
 		rentals = rentals_scalar.all()
 		for rental in rentals:
 			self._set_rental_attr(rental)
@@ -16,7 +22,11 @@ class RentalService:
 		return rentals
 
 	async def get_by_id(self, session: AsyncSession, rental_id: int) -> Rental:
-		rental = await session.scalar(select(Rental).where(Rental.id == rental_id))
+		rental = await session.scalar(
+			select(Rental)
+			.options(selectinload(Rental.costumes), selectinload(Rental.users))
+			.where(Rental.id == rental_id)
+		)
 		if not rental:
 			raise HTTPException(404, detail='Rental not registered.')
 		self._set_rental_attr(rental)
@@ -49,7 +59,7 @@ class RentalService:
 		)
 		session.add(db_rental)
 		await session.commit()
-		await session.refresh(db_rental)
+		await session.refresh(db_rental, ['costumes', 'users'])
 		self._set_rental_attr(db_rental)
 
 		return db_rental

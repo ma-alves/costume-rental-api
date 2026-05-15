@@ -61,14 +61,14 @@ class TestPaymentServiceCreateCustomer:
 		mock_customer.id = 'cus_123456789'
 
 		service = self._make_service()
-		service.client.v1.Customer.create.return_value = mock_customer
+		service.client.v1.customers.create.return_value = mock_customer
 		customer_id = service._create_stripe_customer(
 			email='test@example.com', name='Test User'
 		)
 
 		assert customer_id == 'cus_123456789'
-		service.client.v1.Customer.create.assert_called_once_with(
-			email='test@example.com', name='Test User'
+		service.client.v1.customers.create.assert_called_once_with(
+			{'email': 'test@example.com', 'name': 'Test User'}
 		)
 
 	def test_create_stripe_customer_stripe_error(self):
@@ -76,7 +76,7 @@ class TestPaymentServiceCreateCustomer:
 		from stripe import StripeError
 
 		service = self._make_service()
-		service.client.v1.Customer.create.side_effect = StripeError(
+		service.client.v1.customers.create.side_effect = StripeError(
 			'Customer creation failed'
 		)
 
@@ -101,7 +101,7 @@ class TestPaymentServicePaymentIntent:
 		mock_pi.id = 'pi_123456789'
 
 		service = self._make_service()
-		service.client.v1.PaymentIntent.create.return_value = mock_pi
+		service.client.v1.payment_intents.create.return_value = mock_pi
 
 		result = service._create_stripe_payment_intent(
 			amount=10000, currency='brl', customer_id='cus_123456789'
@@ -109,7 +109,7 @@ class TestPaymentServicePaymentIntent:
 
 		assert result['client_secret'] == 'pi_secret_123'
 		assert result['id'] == 'pi_123456789'
-		service.client.v1.PaymentIntent.create.assert_called_once()
+		service.client.v1.payment_intents.create.assert_called_once()
 
 	def test_retrieve_stripe_payment_intent_success(self):
 		"""Test successful PaymentIntent retrieval."""
@@ -122,7 +122,7 @@ class TestPaymentServicePaymentIntent:
 		mock_pi.charges.data = []
 
 		service = self._make_service()
-		service.client.v1.PaymentIntent.retrieve.return_value = mock_pi
+		service.client.v1.payment_intents.retrieve.return_value = mock_pi
 		result = service._retrieve_stripe_payment_intent('pi_123456789')
 
 		assert result['id'] == 'pi_123456789'
@@ -137,7 +137,7 @@ class TestPaymentServicePaymentIntent:
 		mock_pi.charges.data = []
 
 		service = self._make_service()
-		service.client.v1.PaymentIntent.modify.return_value = mock_pi
+		service.client.v1.payment_intents.capture.return_value = mock_pi
 		pi_id, status = service._capture_stripe_payment_intent('pi_123456789')
 
 		assert pi_id == 'pi_123456789'
@@ -160,7 +160,7 @@ class TestPaymentServiceRefund:
 		mock_ref.amount = 10000
 
 		service = self._make_service()
-		service.client.v1.Refund.create.return_value = mock_ref
+		service.client.v1.refunds.create.return_value = mock_ref
 		refund_id, status, amount = service._refund_stripe_payment('pi_123456789')
 
 		assert refund_id == 're_123456789'
@@ -175,7 +175,7 @@ class TestPaymentServiceRefund:
 		mock_ref.amount = 5000
 
 		service = self._make_service()
-		service.client.v1.Refund.create.return_value = mock_ref
+		service.client.v1.refunds.create.return_value = mock_ref
 		refund_id, status, amount = service._refund_stripe_payment(
 			'pi_123456789', amount=5000
 		)
@@ -245,7 +245,7 @@ class TestPaymentServicePaymentMethods:
 		mock_method1.type = 'card'
 
 		service = self._make_service()
-		service.client.v1.PaymentMethod.list.return_value = MagicMock(
+		service.client.v1.payment_methods.list.return_value = MagicMock(
 			data=[mock_method1]
 		)
 
@@ -261,7 +261,7 @@ class TestPaymentServicePaymentMethods:
 		mock_pm.status = 'disconnected'
 
 		service = self._make_service()
-		service.client.v1.PaymentMethod.detach.return_value = mock_pm
+		service.client.v1.payment_methods.detach.return_value = mock_pm
 		result = service._delete_stripe_payment_method('pm_123')
 
 		assert result['id'] == 'pm_123'

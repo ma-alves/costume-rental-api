@@ -28,12 +28,12 @@ class TestPaymentRouteCreatePaymentIntent:
 		customer_rental,
 	):
 		"""Test successful payment intent creation."""
-		mock_client.v1.Customer.create.return_value = MagicMock(id='cus_123456789')
+		mock_client.v1.customers.create.return_value = MagicMock(id='cus_123456789')
 		mock_intent = MagicMock(
 			id='pi_123456789',
 			client_secret='pi_123456789_secret',
 		)
-		mock_client.v1.PaymentIntent.create.return_value = mock_intent
+		mock_client.v1.payment_intents.create.return_value = mock_intent
 
 		response = client.post(
 			'/api/v1/payments/create-payment-intent',
@@ -126,7 +126,7 @@ class TestPaymentRouteRetrievePayment:
 		test_session.add(payment)
 		await test_session.commit()
 
-		mock_client.v1.PaymentIntent.retrieve.return_value = MagicMock(
+		mock_client.v1.payment_intents.retrieve.return_value = MagicMock(
 			id='pi_123456789',
 			status='requires_payment_method',
 			amount=10000,
@@ -172,7 +172,7 @@ class TestPaymentRouteCapture:
 		test_session.add(payment)
 		await test_session.commit()
 
-		mock_client.v1.PaymentIntent.modify.return_value = MagicMock(
+		mock_client.v1.payment_intents.capture.return_value = MagicMock(
 			id='pi_123456789',
 			status='succeeded',
 			charges=MagicMock(data=[]),
@@ -216,7 +216,7 @@ class TestPaymentRouteRefund:
 		test_session.add(payment)
 		await test_session.commit()
 
-		mock_client.v1.Refund.create.return_value = MagicMock(
+		mock_client.v1.refunds.create.return_value = MagicMock(
 			id='re_123456789',
 			status='succeeded',
 			amount=10000,
@@ -255,7 +255,7 @@ class TestPaymentRouteRefund:
 		test_session.add(payment)
 		await test_session.commit()
 
-		mock_client.v1.Refund.create.return_value = MagicMock(
+		mock_client.v1.refunds.create.return_value = MagicMock(
 			id='re_123456789',
 			status='succeeded',
 			amount=5000,
@@ -315,7 +315,7 @@ class TestPaymentRouteCustomer:
 		test_session: AsyncSession,
 	):
 		"""Test successful customer creation."""
-		mock_client.v1.Customer.create.return_value = MagicMock(id='cus_123456789')
+		mock_client.v1.customers.create.return_value = MagicMock(id='cus_123456789')
 
 		response = client.post(
 			'/api/v1/payments/create-customer',
@@ -380,7 +380,7 @@ class TestPaymentRouteSavedCards:
 			type='card',
 			billing_details={'name': 'Test User'},
 		)
-		mock_client.v1.PaymentMethod.list.return_value = MagicMock(data=[mock_method])
+		mock_client.v1.payment_methods.list.return_value = MagicMock(data=[mock_method])
 
 		response = client.get(
 			'/api/v1/payments/saved-cards',
@@ -425,7 +425,7 @@ class TestPaymentRouteSavedCards:
 		test_session.add(stripe_customer)
 		await test_session.commit()
 
-		mock_client.v1.PaymentMethod.detach.return_value = MagicMock(
+		mock_client.v1.payment_methods.detach.return_value = MagicMock(
 			id='pm_123456789', status='detached'
 		)
 

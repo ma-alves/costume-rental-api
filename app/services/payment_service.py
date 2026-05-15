@@ -5,6 +5,7 @@ from stripe import StripeClient, StripeError
 from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload  # greenlet async and querying issue >:(
 
 from app.models import PaymentStatus, Rental, StripeCustomer, User, Payment
 from app.schemas.payment_schema import (
@@ -32,7 +33,7 @@ class PaymentService:
 
 	def _create_stripe_customer(self, email: str, name: str) -> str:
 		try:
-			customer = self.client.v1.Customer.create(email=email, name=name)
+			customer = self.client.v1.customers.create({'email': email, 'name': name})
 		except StripeError as e:
 			raise HTTPException(status_code=500, detail=str(e))
 		return customer.id
@@ -63,8 +64,8 @@ class PaymentService:
 			idempotency_key = self._generate_idempotency_key(
 				'payment_intent', f'{customer_id}_{rental_id}'
 			)
-			payment_intent = self.client.v1.PaymentIntent.create(
-				**params, idempotency_key=idempotency_key
+			payment_intent = self.client.v1.payment_intents.create(
+				params, {'idempotency_key': idempotency_key}
 			)
 		except StripeError as e:
 			raise HTTPException(status_code=500, detail=str(e))
@@ -73,7 +74,7 @@ class PaymentService:
 	def _retrieve_stripe_payment_intent(self, payment_intent_id: str) -> dict:
 		"""Retrieve PaymentIntent from Stripe (sync)."""
 		try:
-			payment_intent = self.client.v1.PaymentIntent.retrieve(payment_intent_id)
+			payment_intent = self.client.v1.payment_intents.retrieve(payment_intent_id)
 		except StripeError as e:
 			raise HTTPException(status_code=500, detail=str(e))
 		return {
@@ -88,16 +89,14 @@ class PaymentService:
 	def _capture_stripe_payment_intent(self, payment_intent_id: str) -> Tuple[str, str]:
 		"""Capture an authorized PaymentIntent (sync). Returns (id, status)."""
 		try:
-			payment_intent = self.client.v1.PaymentIntent.modify(
+			payment_intent = self.client.v1.payment_intents.capture(
 				payment_intent_id,
-				idempotency_key=self._generate_idempotency_key(
-					'capture', payment_intent_id
-				),
+				options={
+					'idempotency_key': self._generate_idempotency_key(
+						'capture', payment_intent_id
+					)
+				},
 			)
-			if payment_intent.status != 'succeeded':
-				charges = payment_intent.charges.data
-				if charges and not charges[0].captured:
-					self.client.v1.Charge.retrieve(charges[0].id).capture()
 		except StripeError as e:
 			raise HTTPException(status_code=500, detail=str(e))
 		return payment_intent.id, payment_intent.status
@@ -110,13 +109,17 @@ class PaymentService:
 		try:
 			params: dict[str, str | int] = {
 				'payment_intent': payment_intent_id,
-				'idempotency_key': self._generate_idempotency_key(
-					'refund', payment_intent_id
-				),
 			}
 			if amount:
 				params['amount'] = amount
-			refund = self.client.v1.Refund.create(**params)
+			refund = self.client.v1.refunds.create(
+				params,
+				{
+					'idempotency_key': self._generate_idempotency_key(
+						'refund', payment_intent_id
+					)
+				},
+			)
 		except StripeError as e:
 			raise HTTPException(status_code=500, detail=str(e))
 		return refund.id, refund.status, refund.amount
@@ -124,9 +127,10 @@ class PaymentService:
 	def _list_stripe_payment_methods(self, customer_id: str) -> list:
 		"""List saved cards for a Stripe customer (sync)."""
 		try:
-			methods = self.client.v1.PaymentMethod.list(
-				customer=customer_id, type='card'
-			)
+			methods = self.client.v1.payment_methods.list({
+				'customer': customer_id,
+				'type': 'card',
+			})
 		except StripeError as e:
 			raise HTTPException(status_code=500, detail=str(e))
 		return methods.data
@@ -134,7 +138,7 @@ class PaymentService:
 	def _delete_stripe_payment_method(self, payment_method_id: str) -> dict:
 		"""Detach/delete a payment method (sync)."""
 		try:
-			pm = self.client.v1.PaymentMethod.detach(payment_method_id)
+			pm = self.client.v1.payment_methods.detach(payment_method_id)
 		except StripeError as e:
 			raise HTTPException(status_code=500, detail=str(e))
 		return {'id': pm.id, 'status': pm.status}
@@ -161,7 +165,9 @@ class PaymentService:
 	) -> PaymentIntentResponse:
 		"""Full business logic to create a payment intent for a rental."""
 		# 1. Verify rental exists and belongs to user
-		rental = await session.get(Rental, request.rental_id)
+		rental = await session.get(
+			Rental, request.rental_id, options=[selectinload(Rental.costumes)]
+		)
 		if not rental:
 			raise HTTPException(status_code=404, detail='Rental not found')
 		if rental.user_id != current_user.id:
