@@ -29,14 +29,14 @@ app/
 
 tests/
   conftest.py       # Fixtures do Pytest
-  factories.py      # Utils de fixtures (TODO!: clean)
+  factories.py      # Utils de fixtures
   test_*_service.py # Testes unitários (mockados)
   test_*_route.py   # Testes de integração
 
 docs/               # Referências
 ```
 
-## Primeiros Passos
+## Configuração
 1. Clone o repositório:
 ```sh
 git clone https://github.com/ma-alves/costume-rental-api.git
@@ -81,11 +81,11 @@ docker compose up --build
 | DELETE | /api/v1/payments/saved-cards/{payment_method_id} | Yes | Delete saved card |
 | POST | /api/v1/webhooks/stripe | No | Stripe webhook |
 
-## Autenticação e autorização
+## Autenticação e Autorização
 
 A API usa **OAuth2 com Bearer JWT** (`OAuth2PasswordBearer` em [`app/security.py`](app/security.py)). O cliente obtém o token em `POST /api/v1/auth/token` enviando e-mail e senha (`OAuth2PasswordRequestForm`); a senha é validada com **bcrypt** (`passlib`) e o JWT é emitido com o e-mail no claim `sub`, algoritmo e expiração definidos em `.env` (`ALGORITHM`, `ACCESS_TOKEN_EXPIRE_DAYS` — padrão **7 dias**).
 
-### Validação do token
+### Validação de tokens
 
 `get_current_user` decodifica o Bearer token, busca o usuário no banco pelo e-mail e injeta o `User` na rota. Token inválido, expirado ou usuário inexistente retorna **401** com header `WWW-Authenticate: Bearer`.
 
