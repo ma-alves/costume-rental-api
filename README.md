@@ -1,61 +1,60 @@
 # Costume Rental API
 
-*AI generated document reviewed and maintained by ma-alves.*
+API REST para serviço de aluguel de fantasias construída com FastAPI. Segue arquitetura em camadas: rotas tratam as requisições HTTP, os serviços encapsulam as regras de negócio e o SQLAlchemy define a camada de dados. 
 
-RESTful API for a costume rental service built with FastAPI. Follows a layered architecture: routes handle HTTP concerns, services encapsulate business logic, and SQLAlchemy models define the data layer. Authentication via JWT with role-based access (admin/customer). Integrates Stripe for payment processing, customers create and authorize payment intents with saved cards, while admins capture or refund payments. Webhooks receive async status updates from Stripe.
+A autenticação e autorização são feitas via JWT com controle de acesso baseado em roles (RBAC) e injeção de dependências nas rotas, possibilitando a fácil extensão de novas roles. Também está integrada com Stripe para processamento de pagamentos dos alugueis e integração com Resend para notificar os clientes por email.
 
 ## Tech Stack
 - [FastAPI](https://fastapi.tiangolo.com/) - Web Framework
 - [PostgreSQL](https://www.postgresql.org) - SQL Database
-- [SQLAlchemy](https://www.sqlalchemy.org/) - SQL Toolkit and ORM (async)
-- [Stripe SDK](https://github.com/stripe/stripe-python) - Payment Processing
-- [Docker Compose](https://docs.docker.com/compose/) - Environment Development
+- [SQLAlchemy](https://www.sqlalchemy.org/) - SQL Toolkit e ORM (async)
+- [Stripe SDK](https://github.com/stripe/stripe-python) - Pagamentos
+- [Docker Compose](https://docs.docker.com/compose/) - Ambiente de desenvolvimento
 - [GitHub Actions](https://docs.github.com/en/actions) - CI
 - [uv](https://github.com/astral-sh/uv) - Package Manager
-- [Pytest](https://docs.pytest.org/en/8.2.x/) - Testing
-- [PyJWT](https://pypi.org/project/PyJWT/) - Authentication
-- [Alembic](https://alembic.sqlalchemy.org/en/latest/) - Migrations
-- [Passlib](https://passlib.readthedocs.io/) - Password Hashing
+- [Pytest](https://docs.pytest.org/en/8.2.x/) - Testes
+- [PyJWT](https://pypi.org/project/PyJWT/) - Autenticação e Autorização
+- [Alembic](https://alembic.sqlalchemy.org/en/latest/) - Migrações
 
-## Project Structure
+## Estrutura do Projeto
 ```
 app/
-  main.py           # Entry point, registers routers
-  models.py         # SQLAlchemy models (User, Costume, Rental)
-  schemas/          # Pydantic schemas
-  database.py       # Async session factory
-  security.py       # JWT & password utilities
-  routes/           # API routers (auth, users, costumes, rental)
-  services/         # Business logic layer
+  main.py           # Registra os routers
+  models.py         # Modelos
+  schemas/          # Schemas
+  database.py       # DB Generator de sessão assíncrona
+  security.py       # Utilitários JWT e senha
+  routes/           # Routers da API (auth, users, costumes, rental)
+  services/         # Camada de lógica de negócio
 
 tests/
-  conftest.py       # Pytest fixtures
-  factories.py      # Factory Boy test data
-  test_*_service.py # Unit tests (mocked)
-  test_*_route.py   # Integration tests
+  conftest.py       # Fixtures do Pytest
+  factories.py      # Utils de fixtures (TODO!: clean)
+  test_*_service.py # Testes unitários (mockados)
+  test_*_route.py   # Testes de integração
 
-docs/               # References
+docs/               # Referências
 ```
 
-## Getting Started
-1. Clone the repository:
+## Primeiros Passos
+1. Clone o repositório:
 ```sh
 git clone https://github.com/ma-alves/costume-rental-api.git
 cd costume-rental-api
 ```
-2. Copy the environment variables to .env and change the values:
+2. Copie as variáveis de ambiente para .env e altere os valores:
 ```sh
 cp .env.example .env
 ```
-3. Build and run the containers with Docker Compose:
+3. Build e execução dos containers com Docker Compose:
 ```sh
 docker compose up --build
 ```
-4. The API Swagger will be available at http://localhost:8000/docs
+4. O Swagger da API estará disponível em http://localhost:8000/docs
 
 ## API Endpoints
 
-| Method | Endpoint | Auth | Description |
+| Método | Endpoint | Auth | Descrição |
 |--------|----------|------|-------------|
 | POST | /api/v1/auth/token | No | Get JWT token |
 | POST | /api/v1/auth/refresh_token | Admin | Refresh JWT token |
@@ -82,31 +81,72 @@ docker compose up --build
 | DELETE | /api/v1/payments/saved-cards/{payment_method_id} | Yes | Delete saved card |
 | POST | /api/v1/webhooks/stripe | No | Stripe webhook |
 
-## Authentication
-- JWT Bearer token authentication
-- Roles: `admin` (full access) and `customer` (limited access)
-- Token expires in 7 days (configurable)
+## Autenticação e autorização
 
-## Testing
+A API usa **OAuth2 com Bearer JWT** (`OAuth2PasswordBearer` em [`app/security.py`](app/security.py)). O cliente obtém o token em `POST /api/v1/auth/token` enviando e-mail e senha (`OAuth2PasswordRequestForm`); a senha é validada com **bcrypt** (`passlib`) e o JWT é emitido com o e-mail no claim `sub`, algoritmo e expiração definidos em `.env` (`ALGORITHM`, `ACCESS_TOKEN_EXPIRE_DAYS` — padrão **7 dias**).
 
-Uses Pytest with an in-memory SQLite database for fast, isolated test runs. Fixtures in conftest.py provide test data and session management.
+### Validação do token
+
+`get_current_user` decodifica o Bearer token, busca o usuário no banco pelo e-mail e injeta o `User` na rota. Token inválido, expirado ou usuário inexistente retorna **401** com header `WWW-Authenticate: Bearer`.
+
+### Papéis (RBAC)
+
+O modelo define dois papéis (`Role` em [`app/models.py`](app/models.py)):
+
+| Papel | Valor | Uso típico |
+|-------|-------|------------|
+| Administrador | `admin` | Catálogo, listagens administrativas, refresh de token |
+| Cliente | `customer` | Aluguel, pagamentos, atualização do próprio perfil |
+
+### `RoleChecker`
+
+Em [`app/security.py`](app/security.py), `RoleChecker` é uma dependência callable: recebe a lista de papéis permitidos e, após `get_current_user`, verifica se `current_user.role` está nessa lista. Caso contrário, responde **401** (mesma exceção de credenciais inválidas).
+
+```python
+role_checker = Depends(RoleChecker([Role.ADMIN]))
+```
+
+Nas rotas, ela é aplicada com `dependencies=[role_checker]` no decorator, sem exigir o usuário como parâmetro da função — apenas garante que quem chama o endpoint é admin.
+
+**Rotas que usam `RoleChecker` (somente `admin`):**
+
+| Router | Endpoints |
+|--------|-----------|
+| [`auth_route.py`](app/routes/auth_route.py) | `POST /refresh_token` |
+| [`user_route.py`](app/routes/user_route.py) | `GET /`, `GET /{user_id}` |
+| [`costume_route.py`](app/routes/costume_route.py) | `POST /`, `PUT /{id}`, `DELETE /{id}` |
+| [`rental_route.py`](app/routes/rental_route.py) | `GET /`, `GET /{rental_id}` |
+
+**Rotas autenticadas sem `RoleChecker`** — qualquer usuário logado (`Depends(get_current_user)` via `CurrentUser`):
+
+| Router | Endpoints |
+|--------|-----------|
+| [`user_route.py`](app/routes/user_route.py) | `PUT /{user_id}`, `DELETE /{user_id}` (regras adicionais no serviço) |
+| [`rental_route.py`](app/routes/rental_route.py) | `POST /`, `DELETE /{rental_id}` |
+| [`payment_route.py`](app/routes/payment_route.py) | Todos os endpoints de pagamento e cartões salvos |
+
+**Endpoints públicos** (sem JWT): `POST /api/v1/auth/token`, `POST /api/v1/users`, leitura do catálogo de fantasias (`GET /costumes`), `POST /api/v1/webhooks/stripe`.
+
+## Testes
+
+Usa Pytest com banco de dados SQLite em memória para execuções de teste rápidas e isoladas. As fixtures em conftest.py fornecem dados de teste e gerenciamento de sessão.
 
 ```sh
-# Run all tests
+# Executar todos os testes
 uv run pytest -s -x -vv
 
-# Run with coverage
+# Executar com coverage
 uv run pytest -s -x --cov=app -vv
 
-# Run specific test file
+# Executar arquivo de teste específico
 uv run pytest tests/test_user_route.py -vv
 ```
 
-Domain test structure:
-- `test_*_service.py` - Unit tests with mocked database sessions
-- `test_*_route.py` - Integration tests with TestClient
+Estrutura de testes por domínio:
+- `test_*_service.py` - Testes unitários com sessões de banco mockadas
+- `test_*_route.py` - Testes de integração com TestClient
 
-## Examples
+## Exemplos
 ### List Costumes
 ```sh
 curl -X 'GET' \
@@ -163,3 +203,5 @@ Response:
   }
 }
 ```
+
+*Documento parcialmente gerado por IA, revisado e mantido por ma-alves.*
