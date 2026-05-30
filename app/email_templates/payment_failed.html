@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html>
+<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+  <h1>Payment Failed</h1>
+  <p>Hi {{ name }},</p>
+  <p>We could not process your payment for rental #{{ rental_id }}.</p>
+  <p>Please try again or use a different payment method.</p>
+  <ul>
+    <li><strong>Payment ID:</strong> {{ payment_intent_id }}</li>
+  </ul>
+</body>
+</html>

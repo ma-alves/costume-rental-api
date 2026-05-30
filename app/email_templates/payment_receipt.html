@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html>
+<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+  <h1>Payment Received</h1>
+  <p>Hi {{ name }},</p>
+  <p>Your payment for rental #{{ rental_id }} has been processed.</p>
+  <ul>
+    <li><strong>Amount:</strong> {{ currency }} {{ "%.2f"|format(amount) }}</li>
+    <li><strong>Payment ID:</strong> {{ payment_intent_id }}</li>
+  </ul>
+</body>
+</html>

@@ -1,12 +1,14 @@
 import logging
 from typing import Annotated
-from fastapi import APIRouter, Request, HTTPException, Depends
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+
 import stripe
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_session
-from app.models import Payment, Rental, PaymentStatus
+from app.models import Payment, PaymentStatus, Rental
+from app.services.email_service import email_service
 from app.settings import Settings
 
 logger = logging.getLogger(__name__)
@@ -16,7 +18,9 @@ router = APIRouter(prefix='/api/v1/webhooks', tags=['webhooks'])
 
 @router.post('/stripe')
 async def stripe_webhook(
-	request: Request, session: Annotated[AsyncSession, Depends(get_session)]
+	request: Request,
+	background_tasks: BackgroundTasks,
+	session: Annotated[AsyncSession, Depends(get_session)],
 ):
 	"""
 	Handle Stripe webhook events.
@@ -43,15 +47,30 @@ async def stripe_webhook(
 	try:
 		if event['type'] == 'payment_intent.succeeded':
 			payment_intent = event['data']['object']
-			await _handle_payment_succeeded(payment_intent, session)
+			payment_id = await _handle_payment_succeeded(payment_intent, session)
+			if payment_id:
+				background_tasks.add_task(
+					email_service.send_payment_receipt_by_payment_id,
+					payment_id,
+				)
 
 		elif event['type'] == 'payment_intent.payment_failed':
 			payment_intent = event['data']['object']
-			await _handle_payment_failed(payment_intent, session)
+			payment_id = await _handle_payment_failed(payment_intent, session)
+			if payment_id:
+				background_tasks.add_task(
+					email_service.send_payment_failed_by_payment_id,
+					payment_id,
+				)
 
 		elif event['type'] == 'charge.refunded':
 			charge = event['data']['object']
-			await _handle_charge_refunded(charge, session)
+			payment_id = await _handle_charge_refunded(charge, session)
+			if payment_id:
+				background_tasks.add_task(
+					email_service.send_refund_notice_by_payment_id,
+					payment_id,
+				)
 
 		return {'success': True, 'event_type': event['type']}
 
@@ -60,7 +79,9 @@ async def stripe_webhook(
 		raise HTTPException(status_code=500, detail='Webhook processing error')
 
 
-async def _handle_payment_succeeded(payment_intent: dict, session: AsyncSession):
+async def _handle_payment_succeeded(
+	payment_intent: dict, session: AsyncSession
+) -> int | None:
 	"""Handle successful payment intent."""
 	payment_intent_id = payment_intent['id']
 
@@ -71,7 +92,7 @@ async def _handle_payment_succeeded(payment_intent: dict, session: AsyncSession)
 
 	if not payment:
 		logger.warning(f'Payment record not found for intent: {payment_intent_id}')
-		return
+		return None
 
 	payment.status = PaymentStatus.SUCCEEDED
 
@@ -81,9 +102,12 @@ async def _handle_payment_succeeded(payment_intent: dict, session: AsyncSession)
 
 	await session.commit()
 	logger.info(f'Payment succeeded: {payment_intent_id}')
+	return payment.id
 
 
-async def _handle_payment_failed(payment_intent: dict, session: AsyncSession):
+async def _handle_payment_failed(
+	payment_intent: dict, session: AsyncSession
+) -> int | None:
 	"""Handle failed payment intent."""
 	payment_intent_id = payment_intent['id']
 
@@ -94,7 +118,7 @@ async def _handle_payment_failed(payment_intent: dict, session: AsyncSession):
 
 	if not payment:
 		logger.warning(f'Payment record not found for intent: {payment_intent_id}')
-		return
+		return None
 
 	payment.status = PaymentStatus.FAILED
 
@@ -104,15 +128,16 @@ async def _handle_payment_failed(payment_intent: dict, session: AsyncSession):
 
 	await session.commit()
 	logger.info(f'Payment failed: {payment_intent_id}')
+	return payment.id
 
 
-async def _handle_charge_refunded(charge: dict, session: AsyncSession):
+async def _handle_charge_refunded(charge: dict, session: AsyncSession) -> int | None:
 	"""Handle refunded charge."""
 	payment_intent_id = charge.get('payment_intent')
 
 	if not payment_intent_id:
 		logger.warning('Refund event missing payment_intent')
-		return
+		return None
 
 	result = await session.execute(
 		select(Payment).where(Payment.stripe_payment_intent_id == payment_intent_id)
@@ -121,7 +146,7 @@ async def _handle_charge_refunded(charge: dict, session: AsyncSession):
 
 	if not payment:
 		logger.warning(f'Payment record not found for intent: {payment_intent_id}')
-		return
+		return None
 
 	payment.status = PaymentStatus.REFUNDED
 	payment.refunded_amount = charge.get('amount_refunded', 0)
@@ -134,3 +159,4 @@ async def _handle_charge_refunded(charge: dict, session: AsyncSession):
 	logger.info(
 		f'Charge refunded: {payment_intent_id}, amount: {charge.get("amount_refunded")}'
 	)
+	return payment.id
