@@ -67,9 +67,10 @@ class TestPaymentServiceCreateCustomer:
 		)
 
 		assert customer_id == 'cus_123456789'
-		service.client.v1.customers.create.assert_called_once_with(
-			{'email': 'test@example.com', 'name': 'Test User'}
-		)
+		service.client.v1.customers.create.assert_called_once_with({
+			'email': 'test@example.com',
+			'name': 'Test User',
+		})
 
 	def test_create_stripe_customer_stripe_error(self):
 		"""Test Stripe customer creation with Stripe error."""
