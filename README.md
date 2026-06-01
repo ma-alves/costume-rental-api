@@ -74,7 +74,7 @@ docker compose up --build
 | GET | /api/v1/rental | Admin | List rentals |
 | GET | /api/v1/rental/{id} | Admin | Get rental by ID |
 | POST | /api/v1/rental | Yes | Create rental |
-| DELETE | /api/v1/rental/{id} | Yes | Delete rental |
+| DELETE | /api/v1/rental/{id} | Admin | Delete rental |
 | POST | /api/v1/payments/create-payment-intent | Yes | Create payment intent |
 | GET | /api/v1/payments/payment-intent/{id} | Yes | Retrieve payment intent |
 | POST | /api/v1/payments/capture | Yes | Capture payment |
@@ -125,7 +125,7 @@ Nas rotas, ela é aplicada com `dependencies=[role_checker]` no decorator, sem e
 | Router | Endpoints |
 |--------|-----------|
 | [`user_route.py`](app/routes/user_route.py) | `PUT /{user_id}`, `DELETE /{user_id}` (regras adicionais no serviço) |
-| [`rental_route.py`](app/routes/rental_route.py) | `POST /`, `DELETE /{rental_id}` |
+| [`rental_route.py`](app/routes/rental_route.py) | `POST /` |
 | [`payment_route.py`](app/routes/payment_route.py) | Todos os endpoints de pagamento e cartões salvos |
 
 **Endpoints públicos** (sem JWT): `POST /api/v1/auth/token`, `POST /api/v1/users`, leitura do catálogo de fantasias (`GET /costumes`), `POST /api/v1/webhooks/stripe`.

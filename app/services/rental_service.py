@@ -76,8 +76,8 @@ class RentalService:
 		await session.delete(db_rental)
 		await session.commit()
 
-		# Método interno para adequação ao Pydantic em outputs aninhados, futuramente revisar
 
+	# Método interno para adequação ao Pydantic em outputs aninhados, futuramente revisar
 	def _set_rental_attr(self, rental: Rental) -> Rental:
 		"""Sets costume and rental attributes on rental.__dict__"""
 		setattr(rental, 'costume', rental.costumes.__dict__)

@@ -47,7 +47,7 @@ async def create_rental(
 	return db_rental
 
 
-@router.delete('/{rental_id}', response_model=Message)
+@router.delete('/{rental_id}', response_model=Message, dependencies=[role_checker])
 async def delete_rental(session: Session, current_user: CurrentUser, rental_id: int):
 	await rental_service.delete(session, rental_id)
 	return {'message': 'Rental register has been deleted successfully.'}
