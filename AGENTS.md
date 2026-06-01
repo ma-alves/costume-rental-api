@@ -42,7 +42,7 @@ app/
 ## Testing
 - Tests use in-memory SQLite with aiosqlite (not PostgreSQL)
 - Fixtures in `tests/conftest.py`
-- Factory Boy for test data (`tests/factories.py`)
+- Async builder functions for test data (`tests/factories.py`)
 - Default test password: `test1234`
 - **Test structure**: `test_{entity}_service.py` for unit tests, `test_{entity}_route.py` for integration tests
 
