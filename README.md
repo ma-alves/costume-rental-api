@@ -86,11 +86,11 @@ docker compose up --build
 
 ## Autenticação e Autorização
 
-A API usa **OAuth2 com Bearer JWT** (`OAuth2PasswordBearer` em [`app/security.py`](app/security.py)). O cliente obtém o token em `POST /api/v1/auth/token` enviando e-mail e senha (`OAuth2PasswordRequestForm`); a senha é validada com **bcrypt** (`passlib`) e o JWT é emitido com o e-mail no claim `sub`, algoritmo e expiração definidos em `.env` (`ALGORITHM`, `ACCESS_TOKEN_EXPIRE_DAYS` — padrão **7 dias**).
+A API usa OAuth2 com Bearer JWT (`OAuth2PasswordBearer` em [`app/security.py`](app/security.py)). O cliente obtém o token em `POST /api/v1/auth/token` enviando e-mail e senha (`OAuth2PasswordRequestForm`); a senha é validada com bcrypt e o JWT é emitido com o e-mail no claim `sub`, algoritmo e expiração definidos em `.env` (`ALGORITHM`, `ACCESS_TOKEN_EXPIRE_DAYS`).
 
 ### Validação de tokens
 
-`get_current_user` decodifica o Bearer token, busca o usuário no banco pelo e-mail e injeta o `User` na rota. Token inválido, expirado ou usuário inexistente retorna **401** com header `WWW-Authenticate: Bearer`.
+`get_current_user` decodifica o Bearer token, busca o usuário no banco pelo e-mail e injeta o `User` na rota. Token inválido, expirado ou usuário inexistente retorna `401` com header `WWW-Authenticate: Bearer`.
 
 ### Papéis (RBAC)
 
@@ -101,17 +101,17 @@ O modelo define dois papéis (`Role` em [`app/models.py`](app/models.py)):
 | Administrador | `admin` | Catálogo, listagens administrativas, refresh de token |
 | Cliente | `customer` | Aluguel, pagamentos, atualização do próprio perfil |
 
-### `RoleChecker`
+#### RoleChecker
 
-Em [`app/security.py`](app/security.py), `RoleChecker` é uma dependência callable: recebe a lista de papéis permitidos e, após `get_current_user`, verifica se `current_user.role` está nessa lista. Caso contrário, responde **401** (mesma exceção de credenciais inválidas).
+Em [`app/security.py`](app/security.py), `RoleChecker` é uma dependência callable: recebe a lista de papéis permitidos e, após `get_current_user`, verifica se `current_user.role` está nessa lista. Caso contrário, responde `401` (mesma exceção de credenciais inválidas).
 
 ```python
 role_checker = Depends(RoleChecker([Role.ADMIN]))
 ```
 
-Nas rotas, ela é aplicada com `dependencies=[role_checker]` no decorator, sem exigir o usuário como parâmetro da função — apenas garante que quem chama o endpoint é admin.
+Nas rotas, ela é aplicada com `dependencies=[role_checker]` no decorator, sem exigir o usuário como parâmetro da função, apenas garante que quem chama o endpoint é admin.
 
-**Rotas que usam `RoleChecker` (somente `admin`):**
+**Rotas que usam RoleChecker (somente `admin`):**
 
 | Router | Endpoints |
 |--------|-----------|
@@ -120,7 +120,7 @@ Nas rotas, ela é aplicada com `dependencies=[role_checker]` no decorator, sem e
 | [`costume_route.py`](app/routes/costume_route.py) | `POST /`, `PUT /{id}`, `DELETE /{id}` |
 | [`rental_route.py`](app/routes/rental_route.py) | `GET /`, `GET /{rental_id}` |
 
-**Rotas autenticadas sem `RoleChecker`** — qualquer usuário logado (`Depends(get_current_user)` via `CurrentUser`):
+**Rotas autenticadas sem RoleChecker** - qualquer usuário logado (`Depends(get_current_user)` via `CurrentUser`):
 
 | Router | Endpoints |
 |--------|-----------|
@@ -132,11 +132,11 @@ Nas rotas, ela é aplicada com `dependencies=[role_checker]` no decorator, sem e
 
 ## Integração com Stripe
 
-Pagamentos são processados via [Stripe](https://stripe.com) SDK através de `PaymentService` em [`app/services/payment_service.py`](app/services/payment_service.py). A integração cobre desde a criação de *payment intents* até webhooks para atualização de status e salvamento de cartões.
+Pagamentos são processados via Stripe SDK através de `PaymentService` em [`app/services/payment_service.py`](app/services/payment_service.py). A integração cobre desde a criação de `payment_intents` até webhooks para atualização de status e salvamento de cartões.
 
 ### Arquitetura
 
-O `PaymentService` utiliza `StripeClient` (SDK v1, não `stripe.api_key`) e encapsula chamadas síncronas ao Stripe em métodos privados. As rotas públicas (`payment_route.py`) e o webhook (`webhook_route.py`) orquestram o fluxo de negócio.
+O `PaymentService` utiliza `StripeClient` e encapsula chamadas síncronas ao Stripe em métodos privados. As rotas públicas (`payment_route.py`) e o webhook (`webhook_route.py`) orquestram o fluxo de negócio.
 
 | Camada | Responsabilidade |
 |--------|-----------------|
@@ -148,7 +148,7 @@ O `PaymentService` utiliza `StripeClient` (SDK v1, não `stripe.api_key`) e enca
 
 ### Configuração
 
-Adicione ao `.env` (veja [`.env.example`](.env.example)):
+Adicione ao seu `.env` (veja [`.env.example`](.env.example)):
 
 ```env
 STRIPE_SECRET_KEY=sk_test_your_secret_key_here
@@ -186,18 +186,18 @@ STRIPE_WEBHOOK_SECRET=whsec_your_webhook_secret_here
 
 Características importantes:
 
-- **Idempotency keys** — toda operação usa `_generate_idempotency_key` para evitar duplicatas em retentativas
-- **`capture_method: manual`** — o valor é autorizado mas não capturado automaticamente; a captura é feita sob demanda
-- **`setup_future_usage: off_session`** — cartão é salvo automaticamente no StripeCustomer para aluguéis futuros
-- **Status mapping** — `_get_payment_status_enum` converte status do Stripe para o enum local
+- Idempotency keys: toda operação usa `_generate_idempotency_key` para evitar duplicatas em retentativas
+- `capture_method: manual` o valor é autorizado mas não capturado automaticamente; a captura é feita sob demanda
+- `setup_future_usage: off_session` cartão é salvo automaticamente no StripeCustomer para aluguéis futuros
+- Status mapping: `_get_payment_status_enum` converte status do Stripe para o enum local
 
 ### Fluxo de Pagamento
 
-1. **Cliente inicia** → `POST /create-payment-intent` → cria `Payment` (status: `PENDING`) e retorna `client_secret`
-2. **Frontend confirma** → Stripe Elements confirma o payment intent com o cartão
-3. **Webhook notifica** → `payment_intent.succeeded` → atualiza `Payment` (status: `SUCCEEDED`) e `Rental.payment_status`
-4. **Captura** (opcional) → `POST /capture` → move para `CAPTURED`
-5. **Reembolso** → `POST /refund` → total ou parcial, status `REFUNDED`
+1. Cliente inicia → `POST /create-payment-intent` → cria `Payment` (status: `PENDING`) e retorna `client_secret`
+2. Frontend confirma → Stripe Elements confirma o payment intent com o cartão
+3. Webhook notifica → `payment_intent.succeeded` → atualiza `Payment` (status: `SUCCEEDED`) e `Rental.payment_status`
+4. Captura (opcional) → `POST /capture` → move para `CAPTURED`
+5. Reembolso → `POST /refund` → total ou parcial, status `REFUNDED`
 
 ### Webhook
 
@@ -226,11 +226,11 @@ stripe trigger payment_intent.succeeded
 
 ## Integração com Resend
 
-E-mails transacionais são enviados via [Resend](https://resend.com) SDK através de `EmailService` em [`app/services/email_service.py`](app/services/email_service.py), seguindo o mesmo padrão service-layer do `PaymentService` com Stripe.
+E-mails transacionais são enviados via Resend SDK através de `EmailService` em [`app/services/email_service.py`](app/services/email_service.py), seguindo o mesmo padrão service-layer do `PaymentService` com Stripe.
 
 ### Arquitetura
 
-Webhooks do Stripe disparam e-mails **após** a atualização do banco, usando `BackgroundTasks` do FastAPI — o Stripe recebe `200` rápido e falhas no Resend nunca revertem o estado do pagamento.
+Webhooks do Stripe disparam e-mails após a atualização do banco, usando `BackgroundTasks` do FastAPI — o Stripe recebe `200` rápido e falhas no Resend nunca revertem o estado do pagamento.
 
 | Camada | Responsabilidade |
 |--------|-----------------|
@@ -369,3 +369,9 @@ Response:
   }
 }
 ```
+
+## Contato
+
+- GitHub: [ma-alves](https://github.com/ma-alves)
+- Email: matheusvialves@proton.me
+- LinkedIn: [Matheus Alves](https://linkedin.com/in/matheusvialves/)
